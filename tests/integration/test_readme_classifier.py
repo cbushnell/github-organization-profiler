@@ -10,7 +10,7 @@ from __future__ import annotations
 import anthropic
 import pytest
 
-from gh_org_profile.classifiers.readme import _classify_one
+from github_organization_profiler.classifiers.readme import _classify_one
 
 # A short but clearly distinctive README for a Python CLI tool.
 # Distinctive enough that the model should reliably categorise it as "CLI Tool".

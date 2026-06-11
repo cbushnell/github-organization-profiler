@@ -307,7 +307,7 @@ wheels = [
 ]
 
 [[package]]
-name = "gh-org-profile"
+name = "github-organization-profiler"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

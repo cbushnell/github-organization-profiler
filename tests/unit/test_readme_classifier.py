@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from gh_org_profile.classifiers.readme import _parse_json
+from github_organization_profiler.classifiers.readme import _parse_json
 
 
 class TestParseJson:

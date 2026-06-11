@@ -5,8 +5,8 @@ from typing import Any
 
 from github import GithubException
 
-from gh_org_profile import cache
-from gh_org_profile.client import safe_sleep
+from github_organization_profiler import cache
+from github_organization_profiler.client import safe_sleep
 
 
 def collect(repo, org: str, max_age: int) -> dict[str, Any]:

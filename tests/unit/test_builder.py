@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from gh_org_profile.reports.builder import build_report
+from github_organization_profiler.reports.builder import build_report
 
 
 def _make_repo(name: str):

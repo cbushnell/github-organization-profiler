@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from gh_org_profile.client import get_github, get_org, graphql
-from gh_org_profile.collectors.connections import _TOPICS_QUERY
+from github_organization_profiler.client import get_github, get_org, graphql
+from github_organization_profiler.collectors.connections import _TOPICS_QUERY
 
 DEFAULT_ORG = "github"
 

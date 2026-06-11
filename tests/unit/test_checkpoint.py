@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from gh_org_profile.checkpoint import delete, is_complete, load, path, save
+from github_organization_profiler.checkpoint import delete, is_complete, load, path, save
 
 
 class TestPath:

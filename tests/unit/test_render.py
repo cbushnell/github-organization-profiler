@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from gh_org_profile.reports.render import render
+from github_organization_profiler.reports.render import render
 
 
 class TestRenderOutput:

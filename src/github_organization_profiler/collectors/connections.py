@@ -7,8 +7,8 @@ from typing import Any
 import httpx
 from github import GithubException
 
-from gh_org_profile import cache
-from gh_org_profile.client import graphql, safe_sleep
+from github_organization_profiler import cache
+from github_organization_profiler.client import graphql, safe_sleep
 
 _TOPICS_QUERY = """
 query OrgTopics($org: String!, $cursor: String) {

@@ -1,4 +1,4 @@
-# gh-org-profile
+# github-organization-profiler
 
 [![CI](https://github.com/cbushnell/github-org-profiler/actions/workflows/ci.yml/badge.svg)](https://github.com/cbushnell/github-org-profiler/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/cbushnell/github-org-profiler/actions/workflows/codeql.yml/badge.svg)](https://github.com/cbushnell/github-org-profiler/actions/workflows/codeql.yml)
@@ -27,9 +27,9 @@ Profile all public repositories in a GitHub organization — commit activity, qu
 ## Installation
 
 ```bash
-pip install gh-org-profile
+pip install github-organization-profiler
 # or with uv:
-uv tool install gh-org-profile
+uv tool install github-organization-profiler
 ```
 
 ## Configuration
@@ -44,26 +44,26 @@ ANTHROPIC_API_KEY=sk-ant-...   # optional — skip with --no-llm
 ## Usage
 
 ```bash
-gh-org-profile --org <name>
+github-organization-profiler --org <name>
 ```
 
 Common examples:
 
 ```bash
 # Skip LLM classification (faster, no Anthropic key needed)
-gh-org-profile --org <name> --no-llm
+github-organization-profiler --org <name> --no-llm
 
 # Force full re-collection (ignore dormancy + discard checkpoint)
-gh-org-profile --org <name> --full-refresh
+github-organization-profiler --org <name> --full-refresh
 
 # Re-run only README classification (fix stale null classifications)
-gh-org-profile --org <name> --reclassify-readme
+github-organization-profiler --org <name> --reclassify-readme
 
 # Write reports to a custom directory
-gh-org-profile --org <name> --output ./reports
+github-organization-profiler --org <name> --output ./reports
 
 # Limit repos processed (useful for testing)
-gh-org-profile --org <name> --max-repos 10
+github-organization-profiler --org <name> --max-repos 10
 ```
 
 ## Options

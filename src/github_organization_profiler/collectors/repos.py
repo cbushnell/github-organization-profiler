@@ -7,8 +7,8 @@ from typing import Any
 from github import GithubException
 from github.Organization import Organization
 
-from gh_org_profile import cache
-from gh_org_profile.client import safe_sleep
+from github_organization_profiler import cache
+from github_organization_profiler.client import safe_sleep
 
 
 def list_repos(org_obj: Organization, max_repos: int | None = None) -> list:

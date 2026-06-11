@@ -5,7 +5,7 @@ import time
 
 import pytest
 
-import gh_org_profile.cache as cache_mod
+import github_organization_profiler.cache as cache_mod
 
 
 @pytest.fixture(autouse=True)

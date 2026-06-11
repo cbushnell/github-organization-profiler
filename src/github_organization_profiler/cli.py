@@ -54,7 +54,7 @@ def main(
 
     output.mkdir(parents=True, exist_ok=True)
 
-    from gh_org_profile import pipeline
+    from github_organization_profiler import pipeline
 
     pipeline.run(
         org=org,

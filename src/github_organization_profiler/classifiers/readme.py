@@ -6,7 +6,7 @@ from typing import Any
 
 import anthropic
 
-from gh_org_profile import cache
+from github_organization_profiler import cache
 
 _SYSTEM = """You are classifying GitHub repository README files.
 Respond ONLY with valid JSON matching this schema:

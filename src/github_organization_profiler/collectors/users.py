@@ -4,8 +4,8 @@ from typing import Any
 
 from github import Github, GithubException
 
-from gh_org_profile import cache
-from gh_org_profile.client import safe_sleep
+from github_organization_profiler import cache
+from github_organization_profiler.client import safe_sleep
 
 
 def collect_repo_contributors(repo, users: dict, org: str, max_age: int) -> None:

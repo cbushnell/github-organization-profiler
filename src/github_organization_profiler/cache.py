@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-_BASE = Path.home() / ".cache" / "gh-org-profile"
+_BASE = Path.home() / ".cache" / "github-organization-profiler"
 
 
 def _path(org: str, repo: str, collector: str) -> Path:

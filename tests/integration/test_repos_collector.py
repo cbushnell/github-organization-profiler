@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from gh_org_profile.client import get_github, get_org
-from gh_org_profile.collectors.repos import collect_repo_metadata
+from github_organization_profiler.client import get_github, get_org
+from github_organization_profiler.collectors.repos import collect_repo_metadata
 
 DEFAULT_ORG = "github"
 

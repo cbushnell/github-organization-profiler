@@ -2,12 +2,12 @@
 
 ## Overview
 
-`gh-org-profile` is a CLI tool that profiles GitHub organizations by collecting structured data about repositories and generating multi-format reports (JSON, Markdown, CSV). The tool is designed to be **incremental**: it skips detailed collection for dormant repos on subsequent runs, only updating lightweight metrics.
+`github-organization-profiler` is a CLI tool that profiles GitHub organizations by collecting structured data about repositories and generating multi-format reports (JSON, Markdown, CSV). The tool is designed to be **incremental**: it skips detailed collection for dormant repos on subsequent runs, only updating lightweight metrics.
 
 ## Project Structure
 
 ```
-src/gh_org_profile/
+src/github_organization_profiler/
 ├── __init__.py
 ├── cli.py              # Typer CLI entrypoint
 ├── pipeline.py         # Main orchestration
@@ -33,7 +33,7 @@ src/gh_org_profile/
 
 ### CLI (`cli.py`)
 
-**Entrypoint:** `gh-org-profile --org <name> [options]`
+**Entrypoint:** `github-organization-profiler --org <name> [options]`
 
 **Options:**
 - `--org` (required): GitHub organization name
@@ -88,7 +88,7 @@ GitHub API wrapper providing:
 
 ### Cache (`cache.py`)
 
-Filesystem cache at `~/.cache/gh-org-profile/{org}/{repo}/{collector}.json`
+Filesystem cache at `~/.cache/github-organization-profiler/{org}/{repo}/{collector}.json`
 
 **Functions:**
 - `get(org, repo, collector, max_age_hours)`: Retrieve cached data if fresh
@@ -283,7 +283,7 @@ After a run, output directory contains:
 - Enables fast subsequent runs on large orgs
 
 ### Caching Strategy
-- Per-org, per-repo, per-collector cache at `~/.cache/gh-org-profile`
+- Per-org, per-repo, per-collector cache at `~/.cache/github-organization-profiler`
 - `max_age` parameter controls freshness (default 24 hours)
 - `--max-age 0` forces re-fetch all
 - Collectors check cache before API calls
@@ -370,7 +370,7 @@ def test_something_live(github_token):
 ## Notes for Development
 
 1. **State & Dormancy:** Changes to dormancy logic or state structure should be carefully considered; old state files must be handled gracefully.
-2. **Cache Location:** Uses `~/.cache/gh-org-profile`; can grow large on long-running orgs. Users can delete to force full re-fetch.
+2. **Cache Location:** Uses `~/.cache/github-organization-profiler`; can grow large on long-running orgs. Users can delete to force full re-fetch.
 3. **LLM Cost:** Each active repo runs through LLM; consider cost on large orgs. Use `--no-llm` for cost-sensitive runs.
 4. **API Limits:** GitHub allows 5,000 REST calls/hour. Large orgs with many collectors may hit limits; adjust or use token from bot account.
 5. **GraphQL Queries:** Topics fetched via GraphQL upfront for all repos; a single query with pagination.

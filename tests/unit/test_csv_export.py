@@ -4,7 +4,7 @@ import csv
 
 import pytest
 
-from gh_org_profile.reports.csv_export import (
+from github_organization_profiler.reports.csv_export import (
     _contributor_summary,
     _internal_deps,
     _repo_activity,

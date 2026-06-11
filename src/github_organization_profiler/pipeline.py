@@ -35,19 +35,19 @@ def run(
     max_repos: int | None = None,
     reclassify_readme: bool = False,
 ) -> None:
-    from gh_org_profile import cache
-    from gh_org_profile import checkpoint as checkpoint_mod
-    from gh_org_profile import state as state_mod
-    from gh_org_profile.classifiers import readme as readme_mod
-    from gh_org_profile.client import get_github, get_org, rate_limit_sleep
-    from gh_org_profile.collectors import commits as commits_mod
-    from gh_org_profile.collectors import connections as connections_mod
-    from gh_org_profile.collectors import quality as quality_mod
-    from gh_org_profile.collectors import repos as repos_mod
-    from gh_org_profile.collectors import users as users_mod
-    from gh_org_profile.reports import builder as builder_mod
-    from gh_org_profile.reports import csv_export
-    from gh_org_profile.reports import render as render_mod
+    from github_organization_profiler import cache
+    from github_organization_profiler import checkpoint as checkpoint_mod
+    from github_organization_profiler import state as state_mod
+    from github_organization_profiler.classifiers import readme as readme_mod
+    from github_organization_profiler.client import get_github, get_org, rate_limit_sleep
+    from github_organization_profiler.collectors import commits as commits_mod
+    from github_organization_profiler.collectors import connections as connections_mod
+    from github_organization_profiler.collectors import quality as quality_mod
+    from github_organization_profiler.collectors import repos as repos_mod
+    from github_organization_profiler.collectors import users as users_mod
+    from github_organization_profiler.reports import builder as builder_mod
+    from github_organization_profiler.reports import csv_export
+    from github_organization_profiler.reports import render as render_mod
 
     run_at = datetime.now(UTC).isoformat()
     start_time = time.monotonic()

@@ -4,7 +4,7 @@ import json
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 
-from gh_org_profile.state import RunState, classify_repos, load_state, save_state
+from github_organization_profiler.state import RunState, classify_repos, load_state, save_state
 
 
 def _repo(name: str, pushed_at: datetime | None):

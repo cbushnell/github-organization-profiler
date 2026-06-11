@@ -1,5 +1,5 @@
 [project]
-name = "gh-org-profile"
+name = "github-organization-profiler"
 version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
@@ -13,14 +13,14 @@ dependencies = [
 ]
 
 [project.scripts]
-gh-org-profile = "gh_org_profile.cli:app"
+github-organization-profiler = "github_organization_profiler.cli:app"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/gh_org_profile"]
+packages = ["src/github_organization_profiler"]
 
 [project.optional-dependencies]
 test = [
@@ -43,7 +43,7 @@ line-length = 100
 select = ["E", "F", "I", "UP"]
 
 [tool.ruff.lint.per-file-ignores]
-"src/gh_org_profile/reports/render.py" = ["E501"]
+"src/github_organization_profiler/reports/render.py" = ["E501"]
 "tests/**" = ["E501"]
 
 [dependency-groups]

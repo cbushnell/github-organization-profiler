@@ -4,8 +4,8 @@ from typing import Any
 
 from github import GithubException
 
-from gh_org_profile import cache
-from gh_org_profile.client import graphql, safe_sleep
+from github_organization_profiler import cache
+from github_organization_profiler.client import graphql, safe_sleep
 
 # Single GraphQL query replaces 6-8 sequential REST file-existence checks.
 # GraphQL returns null for missing paths — no exception, no extra round-trip.

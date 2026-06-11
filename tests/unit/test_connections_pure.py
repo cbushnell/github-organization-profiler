@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from gh_org_profile.collectors.connections import build_topic_clusters
+from github_organization_profiler.collectors.connections import build_topic_clusters
 
 
 class TestBuildTopicClusters:
