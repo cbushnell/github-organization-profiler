@@ -38,6 +38,14 @@ def github_token():
 
 
 @pytest.fixture
+def anthropic_api_key():
+    key = os.environ.get("ANTHROPIC_API_KEY")
+    if not key:
+        pytest.skip("ANTHROPIC_API_KEY not set")
+    return key
+
+
+@pytest.fixture
 def sample_report():
     return json.loads((_FIXTURES / "sample_report.json").read_text())
 
