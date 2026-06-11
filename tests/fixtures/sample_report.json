@@ -1,0 +1,158 @@
+{
+  "org": "test-org",
+  "generated_at": "2026-06-10T00:00:00+00:00",
+  "prev_run_at": "2026-05-10T00:00:00+00:00",
+  "active_repo_count": 2,
+  "dormant_repo_count": 1,
+  "users": {
+    "alice": {
+      "name": "Alice Smith",
+      "company": "Acme Corp",
+      "bio": "Software Engineer",
+      "email": "alice@example.com",
+      "org_repos_contributed": {
+        "repo-alpha": {"commits": 42, "first_commit": "2024-01-01T00:00:00+00:00", "last_commit": "2026-05-01T00:00:00+00:00"},
+        "repo-beta": {"commits": 10, "first_commit": "2025-01-01T00:00:00+00:00", "last_commit": "2026-04-01T00:00:00+00:00"}
+      }
+    },
+    "bob": {
+      "name": "Bob Jones",
+      "company": null,
+      "bio": null,
+      "email": null,
+      "org_repos_contributed": {
+        "repo-alpha": {"commits": 5, "first_commit": "2025-06-01T00:00:00+00:00", "last_commit": "2026-03-01T00:00:00+00:00"}
+      }
+    }
+  },
+  "repos": {
+    "repo-alpha": {
+      "dormant": false,
+      "dormant_since": null,
+      "activity": {
+        "total_commits": 100,
+        "last_commit_at": "2026-05-01T00:00:00+00:00",
+        "commit_frequency_30d": 5,
+        "commit_frequency_90d": 15,
+        "open_issues_count": 3,
+        "forks_count": 2,
+        "is_archived": false,
+        "is_fork": false,
+        "pushed_at": "2026-05-01T00:00:00+00:00"
+      },
+      "readme_class": {
+        "category": "Python Library / SDK",
+        "summary": "A Python library for data processing.",
+        "confidence": "high"
+      },
+      "quality": {
+        "has_license": true,
+        "license_spdx": "MIT",
+        "has_contributing": true,
+        "has_codeowners": false,
+        "has_security_md": false,
+        "has_dependabot": true,
+        "has_actions": true,
+        "action_workflows": ["ci.yml", "release.yml"],
+        "issues_enabled": true,
+        "quality_score": 4
+      },
+      "connections": {
+        "topics": ["python", "data"],
+        "fork_of": null,
+        "forks": [],
+        "internal_package_deps": [],
+        "reusable_workflow_refs": []
+      }
+    },
+    "repo-beta": {
+      "dormant": false,
+      "dormant_since": null,
+      "activity": {
+        "total_commits": 50,
+        "last_commit_at": "2026-04-15T00:00:00+00:00",
+        "commit_frequency_30d": 3,
+        "commit_frequency_90d": 8,
+        "open_issues_count": 1,
+        "forks_count": 0,
+        "is_archived": false,
+        "is_fork": false,
+        "pushed_at": "2026-04-15T00:00:00+00:00"
+      },
+      "readme_class": {
+        "category": "API / Data Service",
+        "summary": "REST API service.",
+        "confidence": "medium"
+      },
+      "quality": {
+        "has_license": true,
+        "license_spdx": "Apache-2.0",
+        "has_contributing": false,
+        "has_codeowners": false,
+        "has_security_md": false,
+        "has_dependabot": false,
+        "has_actions": true,
+        "action_workflows": ["test.yml"],
+        "issues_enabled": true,
+        "quality_score": 2
+      },
+      "connections": {
+        "topics": ["python", "api"],
+        "fork_of": null,
+        "forks": [],
+        "internal_package_deps": ["repo-alpha"],
+        "reusable_workflow_refs": []
+      }
+    },
+    "repo-old": {
+      "dormant": true,
+      "dormant_since": "2025-12-01",
+      "activity": {
+        "total_commits": 10,
+        "last_commit_at": "2025-10-01T00:00:00+00:00",
+        "commit_frequency_30d": 0,
+        "commit_frequency_90d": 0,
+        "open_issues_count": 0,
+        "forks_count": 1,
+        "is_archived": false,
+        "is_fork": false,
+        "pushed_at": "2025-10-01T00:00:00+00:00"
+      },
+      "readme_class": {
+        "category": "Archive / Deprecated",
+        "summary": "Old project, no longer maintained.",
+        "confidence": "low"
+      },
+      "quality": {
+        "has_license": false,
+        "license_spdx": null,
+        "has_contributing": false,
+        "has_codeowners": false,
+        "has_security_md": false,
+        "has_dependabot": false,
+        "has_actions": false,
+        "action_workflows": [],
+        "issues_enabled": false,
+        "quality_score": 0
+      },
+      "connections": {
+        "topics": ["legacy"],
+        "fork_of": null,
+        "forks": ["other-org/repo-old-fork"],
+        "internal_package_deps": [],
+        "reusable_workflow_refs": []
+      }
+    }
+  },
+  "connections_summary": {
+    "topic_clusters": {
+      "python": ["repo-alpha", "repo-beta"],
+      "data": ["repo-alpha"],
+      "api": ["repo-beta"],
+      "legacy": ["repo-old"]
+    },
+    "internal_dep_graph": {
+      "repo-alpha": ["repo-beta"]
+    }
+  }
+}

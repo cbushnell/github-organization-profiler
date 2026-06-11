@@ -1,0 +1,19 @@
+# Environment
+.env
+
+# Output artifacts
+output/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+dist/
+
+# Cache
+.cache/
+
+# Test
+.pytest_cache/
+.coverage

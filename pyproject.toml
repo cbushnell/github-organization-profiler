@@ -1,0 +1,36 @@
+[project]
+name = "gh-org-profile"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "PyGithub>=2.3",
+    "httpx>=0.27",
+    "anthropic>=0.28",
+    "typer>=0.12",
+    "rich>=13",
+    "python-dotenv>=1.0",
+    "jinja2>=3.1",
+]
+
+[project.scripts]
+gh-org-profile = "gh_org_profile.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gh_org_profile"]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.4",
+    "pytest-mock>=3.12",
+    "respx>=0.20",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: requires real GitHub API (skip with -m 'not integration')",
+]
