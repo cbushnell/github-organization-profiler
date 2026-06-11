@@ -31,10 +31,24 @@ Categories (pick the single best fit):
 _NULL_CLASS: dict[str, Any] = {"category": None, "summary": None, "confidence": "n/a"}
 
 
-def _classify_one(client: anthropic.Anthropic, repo_name: str, readme: str) -> dict[str, Any]:
+def _parse_json(text: str) -> dict[str, Any]:
+    """Parse JSON from model output, stripping markdown code fences if present."""
+    text = text.strip()
+    if text.startswith("```"):
+        # Strip opening fence (```json or ```) and closing fence
+        lines = text.splitlines()
+        lines = lines[1:]  # drop opening fence line
+        if lines and lines[-1].strip().startswith("```"):
+            lines = lines[:-1]
+        text = "\n".join(lines).strip()
+    return json.loads(text)
+
+
+def _classify_one(client: anthropic.Anthropic, repo_name: str, readme: str) -> dict[str, Any] | None:
+    """Call the LLM. Returns parsed dict on success, None on any failure."""
     try:
         response = client.messages.create(
-            model="claude-haiku-4-5",
+            model="claude-haiku-4-5-20251001",
             max_tokens=256,
             system=_SYSTEM,
             messages=[
@@ -42,9 +56,9 @@ def _classify_one(client: anthropic.Anthropic, repo_name: str, readme: str) -> d
             ],
         )
         text = next((b.text for b in response.content if b.type == "text"), "")
-        return json.loads(text)
+        return _parse_json(text)
     except Exception:
-        return _NULL_CLASS
+        return None
 
 
 def make_client() -> anthropic.Anthropic | None:
@@ -57,7 +71,14 @@ def classify_one_cached(client: anthropic.Anthropic, repo_name: str, readme: str
     cached = cache.get(org, repo_name, "readme_class", max_age)
     if cached:
         return cached
-    result = _NULL_CLASS if not readme.strip() else _classify_one(client, repo_name, readme)
+    if not readme.strip():
+        result = _NULL_CLASS
+        cache.put(org, repo_name, "readme_class", result)
+        return result
+    result = _classify_one(client, repo_name, readme)
+    if result is None:
+        # LLM call failed — return null but do NOT cache so the next run retries
+        return _NULL_CLASS
     cache.put(org, repo_name, "readme_class", result)
     return result
 
@@ -86,6 +107,10 @@ def classify_active(active_repos: list, repo_data: dict, org: str, max_age: int,
             continue
 
         result = _classify_one(client, repo.name, readme)
+        if result is None:
+            # LLM call failed — don't cache so the next run retries
+            results[repo.name] = _NULL_CLASS
+            continue
         cache.put(org, repo.name, "readme_class", result)
         results[repo.name] = result
 
