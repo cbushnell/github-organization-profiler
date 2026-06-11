@@ -46,6 +46,10 @@ def main(
     max_repos: Optional[int] = typer.Option(
         None, "--max-repos", help="Limit number of repos processed (useful for testing)"
     ),
+    reclassify_readme: bool = typer.Option(
+        False, "--reclassify-readme",
+        help="Clear cached null README classifications and re-run LLM classification only"
+    ),
 ) -> None:
     if not token:
         typer.echo("Error: --token or GITHUB_TOKEN env var is required", err=True)
@@ -64,4 +68,5 @@ def main(
         output_dir=output,
         max_workers=workers,
         max_repos=max_repos,
+        reclassify_readme=reclassify_readme,
     )

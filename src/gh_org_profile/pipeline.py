@@ -33,7 +33,9 @@ def run(
     output_dir: Path,
     max_workers: int = 4,
     max_repos: int | None = None,
+    reclassify_readme: bool = False,
 ) -> None:
+    from gh_org_profile import cache
     from gh_org_profile import checkpoint as checkpoint_mod
     from gh_org_profile import state as state_mod
     from gh_org_profile.client import get_github, get_org, rate_limit_sleep
@@ -252,6 +254,9 @@ def run(
                     progress.advance(task)
 
         # --- Stage: readme ---
+        if reclassify_readme:
+            n = cache.evict_null_readme_classes(org)
+            console.print(f"[cyan]--reclassify-readme: evicted {n} null readme_class cache entries.")
         if checkpoint_mod.is_complete(ckpt, "readme"):
             console.print(f"[yellow]readme: restored {len(readme_classes)} repos from checkpoint.")
         elif no_llm:

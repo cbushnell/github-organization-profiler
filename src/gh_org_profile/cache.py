@@ -31,3 +31,21 @@ def put(org: str, repo: str, collector: str, data: Any) -> None:
     tmp = p.with_suffix(".tmp")
     tmp.write_text(json.dumps(data, default=str))
     tmp.rename(p)
+
+
+def evict_null_readme_classes(org: str) -> int:
+    """Delete cached readme_class entries where category is None.
+    Returns the number of files removed."""
+    count = 0
+    org_dir = _BASE / org
+    if not org_dir.exists():
+        return 0
+    for p in org_dir.glob("*/readme_class.json"):
+        try:
+            data = json.loads(p.read_text())
+            if data.get("category") is None:
+                p.unlink()
+                count += 1
+        except Exception:
+            pass
+    return count
