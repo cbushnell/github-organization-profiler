@@ -33,8 +33,8 @@ def main(
     max_age: int = typer.Option(
         24, "--max-age", help="Cache max age in hours (0 = always re-fetch)"
     ),
-    output: Path = typer.Option(
-        Path("output"), "--output", help="Directory for report output files"
+    output: Path | None = typer.Option(
+        None, "--output", help="Directory for report output files (default: ./<org>)"
     ),
     workers: int = typer.Option(
         4, "--workers", help="Number of parallel workers for repo collection (default: 4)"
@@ -52,7 +52,8 @@ def main(
         typer.echo("Error: --token or GITHUB_TOKEN env var is required", err=True)
         raise typer.Exit(1)
 
-    output.mkdir(parents=True, exist_ok=True)
+    output_dir = output if output is not None else Path(org)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     from github_organization_profiler import pipeline
 
@@ -63,7 +64,7 @@ def main(
         full_refresh=full_refresh,
         dormancy_days=dormancy_days,
         max_age=max_age,
-        output_dir=output,
+        output_dir=output_dir,
         max_workers=workers,
         max_repos=max_repos,
         reclassify_readme=reclassify_readme,
