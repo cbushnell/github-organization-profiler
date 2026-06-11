@@ -30,13 +30,20 @@ def graphql(token: str, query: str, variables: dict[str, Any] | None = None) -> 
     return data["data"]
 
 
-def rate_limit_sleep(g: Github) -> None:
+def rate_limit_sleep(g: Github, on_sleep=None) -> None:
+    """Sleep until the core rate limit resets if remaining calls are low.
+
+    on_sleep: optional callable(wait_seconds) invoked before sleeping,
+              e.g. to save a checkpoint before a long pause.
+    """
     rl = g.get_rate_limit()
     if rl.resources.core.remaining < 50:
         reset = rl.resources.core.reset
         now = time.time()
         wait = (reset.timestamp() - now) + 5
         if wait > 0:
+            if on_sleep:
+                on_sleep(wait)
             time.sleep(wait)
 
 

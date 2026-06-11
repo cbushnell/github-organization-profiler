@@ -9,7 +9,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-app = typer.Typer(help="Profile all public repositories in a GitHub organization.")
+app = typer.Typer(
+    help=(
+        "Profile all public repositories in a GitHub organization.\n\n"
+        "If a previous run was interrupted, a checkpoint file is detected automatically "
+        "and the pipeline resumes from the last completed stage. "
+        "Use --full-refresh to discard any existing checkpoint and start from scratch."
+    )
+)
 
 
 @app.command()

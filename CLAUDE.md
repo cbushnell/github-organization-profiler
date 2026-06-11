@@ -14,6 +14,7 @@ src/gh_org_profile/
 ├── client.py           # GitHub API wrapper (PyGithub + GraphQL)
 ├── state.py            # Run state & dormancy detection
 ├── cache.py            # Local ~./cache filesystem cache
+├── checkpoint.py       # Pipeline checkpoint: interrupt recovery & resume
 ├── collectors/         # Data collection modules
 │   ├── repos.py       # Repository metadata, README, topics, license
 │   ├── commits.py     # Commit frequency & recency
@@ -91,6 +92,41 @@ Filesystem cache at `~/.cache/gh-org-profile/{org}/{repo}/{collector}.json`
 - `put(org, repo, collector, data)`: Store data in cache
 
 Used by collectors to avoid re-fetching unchanged data within `max_age` window.
+
+### Checkpoint (`checkpoint.py`)
+
+Pipeline-level checkpoint written to `{org}_checkpoint.json` in the output directory after each stage completes. Enables resume after interrupts (keyboard, rate limit, crash).
+
+**Functions:**
+- `path(output_dir, org)`: Returns checkpoint file path
+- `load(output_dir, org)`: Returns parsed checkpoint dict or `None`
+- `save(output_dir, org, last_stage, **data)`: Merges data into checkpoint; writes atomically via `.tmp` rename to avoid partial writes
+- `delete(output_dir, org)`: Removes checkpoint on clean completion
+- `is_complete(ckpt, stage)`: Returns `True` if `stage` has already been completed in the checkpoint, using ordered stage list
+
+**Stage ordering** (used by `is_complete`):
+`repo_metadata` → `topics` → `commits` → `quality` → `connections` → `readme` → `contributors`
+
+**Checkpoint schema:**
+```json
+{
+  "org": "...",
+  "last_stage": "commits",
+  "repo_data": {...},
+  "commit_data": {...},
+  "quality_data": {...},
+  "connections_data": {...},
+  "readme_classes": {...},
+  "users": {...},
+  "topic_clusters": {...}
+}
+```
+
+**Resume behavior:** On startup, pipeline auto-detects checkpoint and restores stage data. Completed stages are skipped; in-progress stage loops check `if repo.name not in data` to skip already-collected repos. `--full-refresh` clears checkpoint and starts from scratch.
+
+**Interrupt handling:** `pipeline.py` wraps the entire run body in `try/except (KeyboardInterrupt, Exception)`. On any interrupt, `_flush_on_interrupt()` saves all current partial in-memory data to the checkpoint (preserving `last_stage` of the last *fully* completed stage) and writes a partial `state.json` so dormancy detection works on the next run.
+
+**Rate limit handling:** `rate_limit_sleep(g, on_sleep=callback)` accepts an optional callback invoked before sleeping. Pipeline passes `_on_rate_sleep` which calls `_flush_on_interrupt()` and prints a warning before the process blocks.
 
 ### Collectors (`collectors/`)
 
@@ -192,6 +228,7 @@ After a run, output directory contains:
 | `{org}_report.md` | Markdown | Human-readable narrative with tables |
 | `{org}_*.csv` | CSV | Tabular sections for spreadsheets/graphing |
 | `{org}_state.json` | JSON | Run state; used to detect dormant repos on next run |
+| `{org}_checkpoint.json` | JSON | Present only during/after an interrupted run; deleted on clean completion |
 
 ## Run Flow
 
@@ -237,8 +274,9 @@ After a run, output directory contains:
 
 ### Rate Limiting
 - Client monitors GitHub API rate limit via `rl.resources.core` (PyGithub ≥2.3 API)
-- Sleeps if remaining < 50
-- Safe 0.1s sleeps between requests
+- Sleeps if remaining < 50; accepts `on_sleep(wait_seconds)` callback invoked before sleeping
+- Pipeline passes a callback that saves the checkpoint before any long sleep
+- Safe 0.1s sleeps between individual requests
 
 ## Dependencies
 
@@ -315,3 +353,5 @@ def test_something_live(github_token):
 3. **LLM Cost:** Each active repo runs through LLM; consider cost on large orgs. Use `--no-llm` for cost-sensitive runs.
 4. **API Limits:** GitHub allows 5,000 REST calls/hour. Large orgs with many collectors may hit limits; adjust or use token from bot account.
 5. **GraphQL Queries:** Topics fetched via GraphQL upfront for all repos; a single query with pagination.
+6. **Checkpoint & Resume:** `checkpoint.py` is the single source of truth for stage ordering. Adding a new pipeline stage requires adding it to `_STAGES` in `checkpoint.py` and inserting the corresponding `_save_ckpt()` call in `pipeline.py`. Do not change the order of existing stages without migrating existing checkpoint files.
+7. **Interrupt Safety:** `_flush_on_interrupt` in `pipeline.py` silently swallows its own exceptions (bare `except Exception: pass`) to avoid masking the original error. Keep this handler minimal.
