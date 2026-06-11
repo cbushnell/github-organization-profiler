@@ -17,3 +17,6 @@ dist/
 # Test
 .pytest_cache/
 .coverage
+
+# AI
+.claude/
