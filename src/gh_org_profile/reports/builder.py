@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 _QUALITY_BOOL_FIELDS = [
@@ -81,9 +81,7 @@ def build_report(
         conns = connections_data.get(name) or {}
         readme = readme_classes.get(name) or _NULL_README
 
-        quality["quality_score"] = sum(
-            bool(quality.get(f)) for f in _QUALITY_BOOL_FIELDS
-        )
+        quality["quality_score"] = sum(bool(quality.get(f)) for f in _QUALITY_BOOL_FIELDS)
 
         repos[name] = {
             "dormant": False,
@@ -110,7 +108,7 @@ def build_report(
         }
 
     # Dormant repos — carry forward from prev_report; overwrite 4 live activity fields
-    today = datetime.now(timezone.utc).date().isoformat()
+    today = datetime.now(UTC).date().isoformat()
 
     for repo in dormant_repos:
         name = repo.name
@@ -127,10 +125,11 @@ def build_report(
                 "connections": prior.get("connections") or dict(_NULL_CONNECTIONS),
             }
             # Overwrite only the four cheaply-refreshed fields
-            record["activity"]["open_issues_count"] = meta.get("open_issues_count", record["activity"]["open_issues_count"])
-            record["activity"]["forks_count"] = meta.get("forks_count", record["activity"]["forks_count"])
-            record["activity"]["is_archived"] = meta.get("is_archived", record["activity"]["is_archived"])
-            record["activity"]["pushed_at"] = meta.get("pushed_at", record["activity"].get("pushed_at"))
+            act = record["activity"]
+            act["open_issues_count"] = meta.get("open_issues_count", act["open_issues_count"])
+            act["forks_count"] = meta.get("forks_count", act["forks_count"])
+            act["is_archived"] = meta.get("is_archived", act["is_archived"])
+            act["pushed_at"] = meta.get("pushed_at", act.get("pushed_at"))
         else:
             # First time seen as dormant (no prior record)
             readme = readme_classes.get(name) or _NULL_README
@@ -180,11 +179,13 @@ def build_report(
             "repos_removed": sorted(prev_names - curr_names),
             "quality_changes": quality_changes,
             "active_to_dormant": sorted(
-                n for n in curr_names & prev_names
+                n
+                for n in curr_names & prev_names
                 if repos[n]["dormant"] and not prev_repos[n].get("dormant", True)
             ),
             "dormant_to_active": sorted(
-                n for n in curr_names & prev_names
+                n
+                for n in curr_names & prev_names
                 if not repos[n]["dormant"] and prev_repos[n].get("dormant", False)
             ),
             "new_contributors": sorted(

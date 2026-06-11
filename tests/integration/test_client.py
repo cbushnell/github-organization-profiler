@@ -2,15 +2,17 @@ from __future__ import annotations
 
 import pytest
 
-DEFAULT_ORG = "github"
 from gh_org_profile.client import get_github, get_org, graphql
 from gh_org_profile.collectors.connections import _TOPICS_QUERY
+
+DEFAULT_ORG = "github"
 
 
 @pytest.mark.integration
 class TestGetGithub:
     def test_returns_github_instance(self, github_token):
         from github import Github
+
         g = get_github(github_token)
         assert isinstance(g, Github)
 

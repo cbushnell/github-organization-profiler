@@ -1,9 +1,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
-
-import pytest
 
 from gh_org_profile.checkpoint import delete, is_complete, load, path, save
 
@@ -50,7 +47,9 @@ class TestSave:
 
     def test_merges_with_existing_checkpoint(self, tmp_path):
         save(tmp_path, "myorg", "topics", topic_clusters={"python": ["repo-a"]})
-        save(tmp_path, "myorg", "collection", commit_data={"repo-a": {}}, quality_data={"repo-a": {}})
+        save(
+            tmp_path, "myorg", "collection", commit_data={"repo-a": {}}, quality_data={"repo-a": {}}
+        )
         result = load(tmp_path, "myorg")
         # Both keys present after second save
         assert "topic_clusters" in result
@@ -118,8 +117,7 @@ class TestIsComplete:
             for j, query in enumerate(stages):
                 expected = j <= i
                 assert is_complete(ckpt, query) is expected, (
-                    f"is_complete(last={completed!r}, query={query!r}) "
-                    f"expected {expected}"
+                    f"is_complete(last={completed!r}, query={query!r}) expected {expected}"
                 )
 
     def test_contributors_complete_implies_all_complete(self):
@@ -146,8 +144,7 @@ class TestSaveLoadRoundTrip:
         assert result["org"] == "myorg"
 
     def test_resume_skips_completed_stages(self, tmp_path):
-        save(tmp_path, "myorg", "collection",
-             commit_data={"a": {}}, quality_data={"a": {}})
+        save(tmp_path, "myorg", "collection", commit_data={"a": {}}, quality_data={"a": {}})
         ckpt = load(tmp_path, "myorg")
         assert is_complete(ckpt, "repo_metadata") is True
         assert is_complete(ckpt, "topics") is True

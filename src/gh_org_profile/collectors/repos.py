@@ -4,7 +4,7 @@ import base64
 import itertools
 from typing import Any
 
-from github import Github, GithubException
+from github import GithubException
 from github.Organization import Organization
 
 from gh_org_profile import cache
@@ -46,7 +46,9 @@ def fetch_repo_metadata(repo, org: str, max_age: int) -> dict[str, Any]:
     return data
 
 
-def collect_repo_metadata(org_obj: Organization, org: str, max_age: int, max_repos: int | None = None) -> tuple[list, dict[str, dict]]:
+def collect_repo_metadata(
+    org_obj: Organization, org: str, max_age: int, max_repos: int | None = None
+) -> tuple[list, dict[str, dict]]:
     """
     Enumerate all public repos, fetch metadata + README for each.
     Returns (repos_list, repo_data_dict).

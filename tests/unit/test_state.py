@@ -1,11 +1,8 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
-from pathlib import Path
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
-
-import pytest
 
 from gh_org_profile.state import RunState, classify_repos, load_state, save_state
 
@@ -19,7 +16,7 @@ def _repo(name: str, pushed_at: datetime | None):
 
 class TestClassifyReposFirstRun:
     def test_all_recent_repos_are_active(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         repos = [
             _repo("a", pushed_at=(now - timedelta(days=10)).replace(tzinfo=None)),
             _repo("b", pushed_at=(now - timedelta(days=30)).replace(tzinfo=None)),
@@ -29,7 +26,7 @@ class TestClassifyReposFirstRun:
         assert len(dormant) == 0
 
     def test_old_repos_are_dormant(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         repos = [
             _repo("old", pushed_at=(now - timedelta(days=120)).replace(tzinfo=None)),
         ]
@@ -43,14 +40,14 @@ class TestClassifyReposFirstRun:
         assert dormant[0].name == "no-push"
 
     def test_boundary_exactly_at_cutoff_is_dormant(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         pushed = (now - timedelta(days=90)).replace(tzinfo=None)
         repos = [_repo("boundary", pushed_at=pushed)]
         active, dormant = classify_repos(repos, prev_state=None, dormancy_days=90)
         assert len(dormant) == 1
 
     def test_mixed_repos(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         repos = [
             _repo("recent", pushed_at=(now - timedelta(days=5)).replace(tzinfo=None)),
             _repo("stale", pushed_at=(now - timedelta(days=200)).replace(tzinfo=None)),
@@ -64,7 +61,9 @@ class TestClassifyReposWithPriorState:
     def test_unchanged_pushed_at_is_dormant(self):
         ts = datetime(2026, 1, 1, 0, 0, 0)
         repo = _repo("x", pushed_at=ts)
-        prior = RunState(org="test-org", run_at="2026-01-01", repo_last_activity={"x": ts.isoformat()})
+        prior = RunState(
+            org="test-org", run_at="2026-01-01", repo_last_activity={"x": ts.isoformat()}
+        )
         active, dormant = classify_repos([repo], prev_state=prior)
         assert dormant[0].name == "x"
 
@@ -72,7 +71,9 @@ class TestClassifyReposWithPriorState:
         old_ts = datetime(2026, 1, 1)
         new_ts = datetime(2026, 2, 1)
         repo = _repo("x", pushed_at=new_ts)
-        prior = RunState(org="test-org", run_at="2026-01-01", repo_last_activity={"x": old_ts.isoformat()})
+        prior = RunState(
+            org="test-org", run_at="2026-01-01", repo_last_activity={"x": old_ts.isoformat()}
+        )
         active, dormant = classify_repos([repo], prev_state=prior)
         assert active[0].name == "x"
 

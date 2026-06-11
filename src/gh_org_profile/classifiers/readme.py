@@ -44,7 +44,9 @@ def _parse_json(text: str) -> dict[str, Any]:
     return json.loads(text)
 
 
-def _classify_one(client: anthropic.Anthropic, repo_name: str, readme: str) -> dict[str, Any] | None:
+def _classify_one(
+    client: anthropic.Anthropic, repo_name: str, readme: str
+) -> dict[str, Any] | None:
     """Call the LLM. Returns parsed dict on success, None on any failure."""
     try:
         response = client.messages.create(
@@ -66,7 +68,9 @@ def make_client() -> anthropic.Anthropic | None:
     return anthropic.Anthropic(api_key=api_key) if api_key else None
 
 
-def classify_one_cached(client: anthropic.Anthropic, repo_name: str, readme: str, org: str, max_age: int) -> dict[str, Any]:
+def classify_one_cached(
+    client: anthropic.Anthropic, repo_name: str, readme: str, org: str, max_age: int
+) -> dict[str, Any]:
     """Classify a single repo's README with caching. Returns the classification dict."""
     cached = cache.get(org, repo_name, "readme_class", max_age)
     if cached:
@@ -83,7 +87,9 @@ def classify_one_cached(client: anthropic.Anthropic, repo_name: str, readme: str
     return result
 
 
-def classify_active(active_repos: list, repo_data: dict, org: str, max_age: int, no_llm: bool) -> dict[str, dict]:
+def classify_active(
+    active_repos: list, repo_data: dict, org: str, max_age: int, no_llm: bool
+) -> dict[str, dict]:
     if no_llm:
         return {r.name: _NULL_CLASS for r in active_repos}
 

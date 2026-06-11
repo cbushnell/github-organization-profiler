@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import pytest
 
-DEFAULT_ORG = "github"
 from gh_org_profile.client import get_github, get_org
 from gh_org_profile.collectors.repos import collect_repo_metadata
+
+DEFAULT_ORG = "github"
 
 
 @pytest.mark.integration

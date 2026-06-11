@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from jinja2 import Environment, BaseLoader
+from jinja2 import BaseLoader, Environment
 
 _MARKDOWN_TEMPLATE = """\
 # {{ report.org }} — GitHub Org Profile
@@ -145,7 +145,8 @@ def render(report: dict, output_dir: Path, org: str, output_files: list[str]) ->
     )
 
     unclassified_repos = [
-        (n, r) for n, r in active_repos
+        (n, r)
+        for n, r in active_repos
         if not r["readme_class"].get("category") or r["readme_class"].get("confidence") == "low"
     ]
 

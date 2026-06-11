@@ -1,0 +1,23 @@
+feature:
+  - changed-files:
+    - any-glob-to-any-file: "src/**"
+
+tests:
+  - changed-files:
+    - any-glob-to-any-file: "tests/**"
+
+ci:
+  - changed-files:
+    - any-glob-to-any-file: ".github/**"
+
+documentation:
+  - changed-files:
+    - any-glob-to-any-file:
+      - "*.md"
+      - "REPORT_SCHEMA.md"
+
+dependencies:
+  - changed-files:
+    - any-glob-to-any-file:
+      - "pyproject.toml"
+      - "uv.lock"

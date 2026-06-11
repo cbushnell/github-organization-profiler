@@ -10,7 +10,6 @@ from github import GithubException
 from gh_org_profile import cache
 from gh_org_profile.client import graphql, safe_sleep
 
-
 _TOPICS_QUERY = """
 query OrgTopics($org: String!, $cursor: String) {
   organization(login: $org) {
@@ -87,7 +86,7 @@ def _fetch_workflow_refs(repo, org: str) -> list[str]:
             try:
                 text = f.decoded_content.decode("utf-8", errors="replace")
                 for line in text.splitlines():
-                    m = re.search(rf'uses:\s+({re.escape(org)}/[^\s@]+)', line)
+                    m = re.search(rf"uses:\s+({re.escape(org)}/[^\s@]+)", line)
                     if m:
                         refs.append(m.group(1))
             except Exception:

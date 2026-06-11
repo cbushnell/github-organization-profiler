@@ -4,11 +4,11 @@ NOTE: These tests make real calls to the Anthropic API and will incur a
 minor cost (one claude-haiku-4-5 inference, ~256 output tokens).
 Only run intentionally via --run-integration.
 """
+
 from __future__ import annotations
 
-import pytest
-
 import anthropic
+import pytest
 
 from gh_org_profile.classifiers.readme import _classify_one
 
@@ -57,7 +57,6 @@ _VALID_CATEGORIES = {
     "Archive / Deprecated",
     "Other",
 }
-
 
 
 @pytest.mark.integration

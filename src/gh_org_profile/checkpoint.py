@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-
 # Ordered list of pipeline stages. is_complete() uses this ordering.
 _STAGES = [
     "repo_metadata",

@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import csv
-from io import StringIO
-from pathlib import Path
 
 import pytest
 
@@ -30,7 +28,19 @@ class TestRepoActivity:
 
     def test_required_columns(self, report):
         row = _repo_activity(report)[0]
-        for col in ("repo", "pushed_at", "last_commit_at", "commits_30d", "commits_90d", "open_issues_count", "forks_count", "is_archived", "is_fork", "dormant", "dormant_since"):
+        for col in (
+            "repo",
+            "pushed_at",
+            "last_commit_at",
+            "commits_30d",
+            "commits_90d",
+            "open_issues_count",
+            "forks_count",
+            "is_archived",
+            "is_fork",
+            "dormant",
+            "dormant_since",
+        ):
             assert col in row
 
     def test_dormant_column_correct(self, report):
@@ -50,7 +60,20 @@ class TestRepoQuality:
 
     def test_required_columns(self, report):
         row = _repo_quality(report)[0]
-        for col in ("repo", "has_license", "license_spdx", "has_contributing", "has_codeowners", "has_security_md", "has_dependabot", "has_actions", "workflow_count", "issues_enabled", "quality_score", "dormant"):
+        for col in (
+            "repo",
+            "has_license",
+            "license_spdx",
+            "has_contributing",
+            "has_codeowners",
+            "has_security_md",
+            "has_dependabot",
+            "has_actions",
+            "workflow_count",
+            "issues_enabled",
+            "quality_score",
+            "dormant",
+        ):
             assert col in row
 
     def test_workflow_count_derived(self, report):
@@ -171,7 +194,15 @@ class TestExportAll:
     def test_files_named_correctly(self, report, tmp_path):
         paths = export_all(report, tmp_path, "test-org")
         names = {p.name for p in paths}
-        for stem in ("repo_activity", "repo_quality", "repo_classification", "contributor_summary", "repo_contributor_matrix", "topic_clusters", "internal_deps"):
+        for stem in (
+            "repo_activity",
+            "repo_quality",
+            "repo_classification",
+            "contributor_summary",
+            "repo_contributor_matrix",
+            "topic_clusters",
+            "internal_deps",
+        ):
             assert f"test-org_{stem}.csv" in names
 
     def test_csv_files_are_parseable(self, report, tmp_path):

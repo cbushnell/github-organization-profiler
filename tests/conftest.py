@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -50,7 +50,14 @@ def sample_report():
     return json.loads((_FIXTURES / "sample_report.json").read_text())
 
 
-def _make_repo(name: str, pushed_at: datetime | None = None, open_issues: int = 0, forks: int = 0, archived: bool = False, is_fork: bool = False):
+def _make_repo(
+    name: str,
+    pushed_at: datetime | None = None,
+    open_issues: int = 0,
+    forks: int = 0,
+    archived: bool = False,
+    is_fork: bool = False,
+):
     repo = MagicMock()
     repo.name = name
     repo.pushed_at = pushed_at

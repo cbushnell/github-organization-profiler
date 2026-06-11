@@ -48,7 +48,9 @@ def collect(repo, org: str, max_age: int, token: str) -> dict[str, Any]:
         li = r.get("licenseInfo")
         license_spdx = li.get("spdxId") if li else None
         has_license = bool(li) or any(r.get(k) for k in ("license1", "license2", "license3"))
-        has_contributing = any(r.get(k) for k in ("contributing1", "contributing2", "contributing3"))
+        has_contributing = any(
+            r.get(k) for k in ("contributing1", "contributing2", "contributing3")
+        )
         has_codeowners = any(r.get(k) for k in ("codeowners1", "codeowners2"))
         has_security_md = any(r.get(k) for k in ("security1", "security2"))
         has_dependabot = any(r.get(k) for k in ("dependabot1", "dependabot2"))

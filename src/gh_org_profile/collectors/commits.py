@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from github import GithubException
@@ -14,7 +14,7 @@ def collect(repo, org: str, max_age: int) -> dict[str, Any]:
     if cached:
         return cached
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     since_30d = now - timedelta(days=30)
     since_90d = now - timedelta(days=90)
     since_6m = now - timedelta(days=180)
@@ -25,12 +25,12 @@ def collect(repo, org: str, max_age: int) -> dict[str, Any]:
         commits_6m = list(repo.get_commits(since=since_6m))
         if commits_6m:
             dt = commits_6m[0].commit.author.date
-            last_commit_at = dt.replace(tzinfo=timezone.utc).isoformat() if dt else None
+            last_commit_at = dt.replace(tzinfo=UTC).isoformat() if dt else None
     except GithubException:
         pass
 
-    commits_90 = [c for c in commits_6m if c.commit.author.date.replace(tzinfo=timezone.utc) >= since_90d]
-    commits_30 = [c for c in commits_6m if c.commit.author.date.replace(tzinfo=timezone.utc) >= since_30d]
+    commits_90 = [c for c in commits_6m if c.commit.author.date.replace(tzinfo=UTC) >= since_90d]
+    commits_30 = [c for c in commits_6m if c.commit.author.date.replace(tzinfo=UTC) >= since_30d]
 
     data: dict[str, Any] = {
         "total_commits": len(commits_6m),

@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import pytest
 
-DEFAULT_ORG = "github"
 from gh_org_profile.client import get_github, get_org
 from gh_org_profile.collectors.commits import collect
+
+DEFAULT_ORG = "github"
 
 
 @pytest.mark.integration
@@ -17,7 +18,12 @@ class TestCommitsCollector:
 
     def test_returns_dict_with_required_keys(self, hello_world):
         result = collect(hello_world, DEFAULT_ORG, max_age=0)
-        for key in ("total_commits", "last_commit_at", "commit_frequency_30d", "commit_frequency_90d"):
+        for key in (
+            "total_commits",
+            "last_commit_at",
+            "commit_frequency_30d",
+            "commit_frequency_90d",
+        ):
             assert key in result
 
     def test_total_commits_positive(self, hello_world):

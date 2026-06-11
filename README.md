@@ -1,5 +1,12 @@
 # gh-org-profile
 
+[![CI](https://github.com/cbushnell/github-org-profiler/actions/workflows/ci.yml/badge.svg)](https://github.com/cbushnell/github-org-profiler/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/cbushnell/github-org-profiler/actions/workflows/codeql.yml/badge.svg)](https://github.com/cbushnell/github-org-profiler/actions/workflows/codeql.yml)
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![License: CC0-1.0](https://img.shields.io/badge/License-CC0_1.0-lightgrey.svg)](http://creativecommons.org/publicdomain/zero/1.0/)
+
 Profile all public repositories in a GitHub organization — commit activity, quality signals, LLM-classified READMEs, and multi-format reports.
 
 ## Features

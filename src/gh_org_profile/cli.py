@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
-from typing import Optional
 
 import typer
 from dotenv import load_dotenv
@@ -22,12 +20,10 @@ app = typer.Typer(
 @app.command()
 def main(
     org: str = typer.Option(..., "--org", help="GitHub organization name"),
-    token: Optional[str] = typer.Option(
+    token: str | None = typer.Option(
         None, "--token", envvar="GITHUB_TOKEN", help="GitHub personal access token"
     ),
-    no_llm: bool = typer.Option(
-        False, "--no-llm", help="Skip LLM README classification"
-    ),
+    no_llm: bool = typer.Option(False, "--no-llm", help="Skip LLM README classification"),
     full_refresh: bool = typer.Option(
         False, "--full-refresh", help="Re-collect all repos regardless of state"
     ),
@@ -43,12 +39,13 @@ def main(
     workers: int = typer.Option(
         4, "--workers", help="Number of parallel workers for repo collection (default: 4)"
     ),
-    max_repos: Optional[int] = typer.Option(
+    max_repos: int | None = typer.Option(
         None, "--max-repos", help="Limit number of repos processed (useful for testing)"
     ),
     reclassify_readme: bool = typer.Option(
-        False, "--reclassify-readme",
-        help="Clear cached null README classifications and re-run LLM classification only"
+        False,
+        "--reclassify-readme",
+        help="Clear cached null README classifications and re-run LLM classification only",
     ),
 ) -> None:
     if not token:
@@ -58,6 +55,7 @@ def main(
     output.mkdir(parents=True, exist_ok=True)
 
     from gh_org_profile import pipeline
+
     pipeline.run(
         org=org,
         token=token,

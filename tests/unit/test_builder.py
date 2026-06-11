@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from unittest.mock import MagicMock
-
-import pytest
 
 from gh_org_profile.reports.builder import build_report
 
@@ -31,7 +28,14 @@ def _base_call(**overrides):
                 "topics": ["python"],
             }
         },
-        commit_data={"repo-a": {"total_commits": 50, "last_commit_at": "2026-05-01", "commit_frequency_30d": 5, "commit_frequency_90d": 15}},
+        commit_data={
+            "repo-a": {
+                "total_commits": 50,
+                "last_commit_at": "2026-05-01",
+                "commit_frequency_30d": 5,
+                "commit_frequency_90d": 15,
+            }
+        },
         quality_data={
             "repo-a": {
                 "has_license": True,
@@ -45,9 +49,26 @@ def _base_call(**overrides):
                 "issues_enabled": True,
             }
         },
-        connections_data={"repo-a": {"fork_of": None, "forks": [], "internal_package_deps": [], "reusable_workflow_refs": []}},
-        readme_classes={"repo-a": {"category": "CLI Tool", "summary": "A CLI.", "confidence": "high"}},
-        users={"alice": {"name": "Alice", "company": None, "bio": None, "email": None, "org_repos_contributed": {}}},
+        connections_data={
+            "repo-a": {
+                "fork_of": None,
+                "forks": [],
+                "internal_package_deps": [],
+                "reusable_workflow_refs": [],
+            }
+        },
+        readme_classes={
+            "repo-a": {"category": "CLI Tool", "summary": "A CLI.", "confidence": "high"}
+        },
+        users={
+            "alice": {
+                "name": "Alice",
+                "company": None,
+                "bio": None,
+                "email": None,
+                "org_repos_contributed": {},
+            }
+        },
         topic_clusters={"python": ["repo-a"]},
     )
     defaults.update(overrides)
@@ -86,13 +107,33 @@ class TestActiveRepoAssembly:
         assert report["repos"]["repo-a"]["quality"]["quality_score"] == 4
 
     def test_quality_score_zero_when_all_false(self):
-        q = {k: False for k in ["has_license", "has_contributing", "has_codeowners", "has_security_md", "has_dependabot", "has_actions"]}
+        q = {
+            k: False
+            for k in [
+                "has_license",
+                "has_contributing",
+                "has_codeowners",
+                "has_security_md",
+                "has_dependabot",
+                "has_actions",
+            ]
+        }
         q.update({"license_spdx": None, "action_workflows": [], "issues_enabled": False})
         report = build_report(**_base_call(quality_data={"repo-a": q}))
         assert report["repos"]["repo-a"]["quality"]["quality_score"] == 0
 
     def test_quality_score_six_when_all_true(self):
-        q = {k: True for k in ["has_license", "has_contributing", "has_codeowners", "has_security_md", "has_dependabot", "has_actions"]}
+        q = {
+            k: True
+            for k in [
+                "has_license",
+                "has_contributing",
+                "has_codeowners",
+                "has_security_md",
+                "has_dependabot",
+                "has_actions",
+            ]
+        }
         q.update({"license_spdx": "MIT", "action_workflows": ["ci.yml"], "issues_enabled": True})
         report = build_report(**_base_call(quality_data={"repo-a": q}))
         assert report["repos"]["repo-a"]["quality"]["quality_score"] == 6
@@ -120,9 +161,30 @@ class TestDormantRepoCarryForward:
                         "is_archived": False,
                         "is_fork": False,
                     },
-                    "readme_class": {"category": "Other", "summary": "Old stuff.", "confidence": "low"},
-                    "quality": {"has_license": False, "has_contributing": False, "has_codeowners": False, "has_security_md": False, "has_dependabot": False, "has_actions": False, "license_spdx": None, "action_workflows": [], "issues_enabled": False, "quality_score": 0},
-                    "connections": {"topics": ["legacy"], "fork_of": None, "forks": [], "internal_package_deps": [], "reusable_workflow_refs": []},
+                    "readme_class": {
+                        "category": "Other",
+                        "summary": "Old stuff.",
+                        "confidence": "low",
+                    },
+                    "quality": {
+                        "has_license": False,
+                        "has_contributing": False,
+                        "has_codeowners": False,
+                        "has_security_md": False,
+                        "has_dependabot": False,
+                        "has_actions": False,
+                        "license_spdx": None,
+                        "action_workflows": [],
+                        "issues_enabled": False,
+                        "quality_score": 0,
+                    },
+                    "connections": {
+                        "topics": ["legacy"],
+                        "fork_of": None,
+                        "forks": [],
+                        "internal_package_deps": [],
+                        "reusable_workflow_refs": [],
+                    },
                 }
             },
         }
@@ -131,10 +193,26 @@ class TestDormantRepoCarryForward:
         return _base_call(
             active_repos=[],
             dormant_repos=[_make_repo("repo-d")],
-            repo_data={"repo-d": {"open_issues_count": 5, "forks_count": 2, "is_archived": True, "is_fork": False, "pushed_at": "2025-10-01T00:00:00+00:00", "topics": ["legacy"]}},
+            repo_data={
+                "repo-d": {
+                    "open_issues_count": 5,
+                    "forks_count": 2,
+                    "is_archived": True,
+                    "is_fork": False,
+                    "pushed_at": "2025-10-01T00:00:00+00:00",
+                    "topics": ["legacy"],
+                }
+            },
             commit_data={},
             quality_data={},
-            connections_data={"repo-d": {"fork_of": None, "forks": [], "internal_package_deps": [], "reusable_workflow_refs": []}},
+            connections_data={
+                "repo-d": {
+                    "fork_of": None,
+                    "forks": [],
+                    "internal_package_deps": [],
+                    "reusable_workflow_refs": [],
+                }
+            },
             readme_classes={"repo-d": {"category": None, "summary": None, "confidence": "n/a"}},
             prev_report=self._prev_report(),
         )
@@ -170,6 +248,7 @@ class TestDormantRepoCarryForward:
         call["prev_report"] = None
         report = build_report(**call)
         from datetime import date
+
         assert report["repos"]["repo-d"]["dormant_since"] == date.today().isoformat()
 
 
@@ -178,16 +257,56 @@ class TestInternalDepGraph:
         call = _base_call(
             active_repos=[_make_repo("consumer"), _make_repo("lib")],
             repo_data={
-                "consumer": {"open_issues_count": 0, "forks_count": 0, "is_archived": False, "is_fork": False, "pushed_at": None, "topics": []},
-                "lib": {"open_issues_count": 0, "forks_count": 0, "is_archived": False, "is_fork": False, "pushed_at": None, "topics": []},
+                "consumer": {
+                    "open_issues_count": 0,
+                    "forks_count": 0,
+                    "is_archived": False,
+                    "is_fork": False,
+                    "pushed_at": None,
+                    "topics": [],
+                },
+                "lib": {
+                    "open_issues_count": 0,
+                    "forks_count": 0,
+                    "is_archived": False,
+                    "is_fork": False,
+                    "pushed_at": None,
+                    "topics": [],
+                },
             },
-            commit_data={"consumer": {"total_commits": 1, "last_commit_at": None, "commit_frequency_30d": 0, "commit_frequency_90d": 0}, "lib": {"total_commits": 1, "last_commit_at": None, "commit_frequency_30d": 0, "commit_frequency_90d": 0}},
+            commit_data={
+                "consumer": {
+                    "total_commits": 1,
+                    "last_commit_at": None,
+                    "commit_frequency_30d": 0,
+                    "commit_frequency_90d": 0,
+                },
+                "lib": {
+                    "total_commits": 1,
+                    "last_commit_at": None,
+                    "commit_frequency_30d": 0,
+                    "commit_frequency_90d": 0,
+                },
+            },
             quality_data={},
             connections_data={
-                "consumer": {"fork_of": None, "forks": [], "internal_package_deps": ["lib"], "reusable_workflow_refs": []},
-                "lib": {"fork_of": None, "forks": [], "internal_package_deps": [], "reusable_workflow_refs": []},
+                "consumer": {
+                    "fork_of": None,
+                    "forks": [],
+                    "internal_package_deps": ["lib"],
+                    "reusable_workflow_refs": [],
+                },
+                "lib": {
+                    "fork_of": None,
+                    "forks": [],
+                    "internal_package_deps": [],
+                    "reusable_workflow_refs": [],
+                },
             },
-            readme_classes={"consumer": {"category": None, "summary": None, "confidence": "n/a"}, "lib": {"category": None, "summary": None, "confidence": "n/a"}},
+            readme_classes={
+                "consumer": {"category": None, "summary": None, "confidence": "n/a"},
+                "lib": {"category": None, "summary": None, "confidence": "n/a"},
+            },
             topic_clusters={},
         )
         report = build_report(**call)

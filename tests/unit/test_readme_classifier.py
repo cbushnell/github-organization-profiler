@@ -1,4 +1,5 @@
 """Unit tests for the README classifier — no external calls."""
+
 from __future__ import annotations
 
 from gh_org_profile.classifiers.readme import _parse_json
@@ -12,7 +13,9 @@ class TestParseJson:
     """
 
     def test_handles_markdown_fences(self):
-        fenced = '```json\n{"category": "CLI Tool", "summary": "A tool.", "confidence": "high"}\n```'
+        fenced = (
+            '```json\n{"category": "CLI Tool", "summary": "A tool.", "confidence": "high"}\n```'
+        )
         result = _parse_json(fenced)
         assert result["category"] == "CLI Tool"
         assert result["confidence"] == "high"

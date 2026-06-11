@@ -3,12 +3,12 @@ from __future__ import annotations
 import json
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, MofNCompleteColumn
+from rich.progress import BarColumn, MofNCompleteColumn, Progress, SpinnerColumn, TextColumn
 
 console = Console()
 
@@ -38,18 +38,18 @@ def run(
     from gh_org_profile import cache
     from gh_org_profile import checkpoint as checkpoint_mod
     from gh_org_profile import state as state_mod
-    from gh_org_profile.client import get_github, get_org, rate_limit_sleep
-    from gh_org_profile.collectors import repos as repos_mod
-    from gh_org_profile.collectors import commits as commits_mod
-    from gh_org_profile.collectors import users as users_mod
-    from gh_org_profile.collectors import quality as quality_mod
-    from gh_org_profile.collectors import connections as connections_mod
     from gh_org_profile.classifiers import readme as readme_mod
+    from gh_org_profile.client import get_github, get_org, rate_limit_sleep
+    from gh_org_profile.collectors import commits as commits_mod
+    from gh_org_profile.collectors import connections as connections_mod
+    from gh_org_profile.collectors import quality as quality_mod
+    from gh_org_profile.collectors import repos as repos_mod
+    from gh_org_profile.collectors import users as users_mod
     from gh_org_profile.reports import builder as builder_mod
-    from gh_org_profile.reports import render as render_mod
     from gh_org_profile.reports import csv_export
+    from gh_org_profile.reports import render as render_mod
 
-    run_at = datetime.now(timezone.utc).isoformat()
+    run_at = datetime.now(UTC).isoformat()
     start_time = time.monotonic()
 
     # --- Checkpoint ---
@@ -59,7 +59,9 @@ def run(
         ckpt = None
         console.print("[yellow]Full refresh: cleared existing checkpoint.")
     if ckpt:
-        console.print(f"[yellow]Resuming from checkpoint (last completed stage: {ckpt['last_stage']})")
+        console.print(
+            f"[yellow]Resuming from checkpoint (last completed stage: {ckpt['last_stage']})"
+        )
 
     # Aggregated data — restored from checkpoint or empty
     repo_data: dict = (ckpt or {}).get("repo_data") or {}
@@ -83,7 +85,8 @@ def run(
             existing = checkpoint_mod.load(output_dir, org) or {}
             last_completed = existing.get("last_stage", "none")
             flush_data = {
-                k: v for k, v in {
+                k: v
+                for k, v in {
                     "repo_data": repo_data,
                     "commit_data": commit_data,
                     "quality_data": quality_data,
@@ -91,7 +94,8 @@ def run(
                     "readme_classes": readme_classes,
                     "users": users,
                     "topic_clusters": topic_clusters,
-                }.items() if v
+                }.items()
+                if v
             }
             checkpoint_mod.save(output_dir, org, last_completed, **flush_data)
             if repos:
@@ -128,7 +132,9 @@ def run(
 
         # --- Stage: repo_metadata ---
         if checkpoint_mod.is_complete(ckpt, "repo_metadata"):
-            console.print(f"[yellow]repo_metadata: restored {len(repo_data)} repos from checkpoint.")
+            console.print(
+                f"[yellow]repo_metadata: restored {len(repo_data)} repos from checkpoint."
+            )
         else:
             console.print("Fetching metadata...")
             with Progress(
@@ -159,7 +165,8 @@ def run(
             if prev_report:
                 prev_repos = prev_report.get("repos", {})
                 newly_dormant = [
-                    r for r in dormant_repos
+                    r
+                    for r in dormant_repos
                     if r.name in prev_repos and not prev_repos[r.name].get("dormant", True)
                 ]
                 if newly_dormant:
@@ -171,12 +178,18 @@ def run(
 
         # --- Stage: topics ---
         if checkpoint_mod.is_complete(ckpt, "topics"):
-            console.print(f"[yellow]topics: restored {len(topic_clusters)} clusters from checkpoint.")
+            console.print(
+                f"[yellow]topics: restored {len(topic_clusters)} clusters from checkpoint."
+            )
         else:
             try:
-                with console.status("[bold green]Fetching topics via GraphQL... (0 repos)") as status:
+                with console.status(
+                    "[bold green]Fetching topics via GraphQL... (0 repos)"
+                ) as status:
+
                     def _on_page(count: int) -> None:
                         status.update(f"[bold green]Fetching topics via GraphQL... ({count} repos)")
+
                     repo_topics = connections_mod.fetch_all_topics(token, org, on_page=_on_page)
                 console.print(f"[cyan]Topics fetched for [bold]{len(repo_topics)}[/bold] repos.")
             except Exception:
@@ -190,9 +203,12 @@ def run(
 
         # --- Collectors for active repos ---
         if active_repos:
+
             def _on_rate_sleep(wait: float) -> None:
                 _flush_on_interrupt()
-                console.print(f"[yellow]Rate limit reached — sleeping {wait:.0f}s (checkpoint saved).")
+                console.print(
+                    f"[yellow]Rate limit reached — sleeping {wait:.0f}s (checkpoint saved)."
+                )
 
             # Stage: collection (commits + quality + connections in parallel)
             if checkpoint_mod.is_complete(ckpt, "collection"):
@@ -210,14 +226,21 @@ def run(
                     console=console,
                 ) as progress:
                     task = progress.add_task(
-                        f"[green]Collecting ({len(repos_to_collect)} repos, {max_workers} workers)...",
+                        f"[green]Collecting ({len(repos_to_collect)} repos, "
+                        f"{max_workers} workers)...",
                         total=len(repos_to_collect),
                     )
                     with ThreadPoolExecutor(max_workers=max_workers) as pool:
                         futures = {
                             pool.submit(
-                                _collect_repo, repo, org, max_age,
-                                commits_mod, quality_mod, connections_mod, token,
+                                _collect_repo,
+                                repo,
+                                org,
+                                max_age,
+                                commits_mod,
+                                quality_mod,
+                                connections_mod,
+                                token,
                             ): repo
                             for repo in repos_to_collect
                         }
@@ -230,10 +253,16 @@ def run(
                                 connections_data[name] = cod
                             except Exception as exc:
                                 failed_repos[repo.name] = str(exc)
-                                console.print(f"[red]  {repo.name}: collection failed — {exc}[/red]")
+                                console.print(
+                                    f"[red]  {repo.name}: collection failed — {exc}[/red]"
+                                )
                             progress.advance(task)
-                _save_ckpt("collection", commit_data=commit_data,
-                           quality_data=quality_data, connections_data=connections_data)
+                _save_ckpt(
+                    "collection",
+                    commit_data=commit_data,
+                    quality_data=quality_data,
+                    connections_data=connections_data,
+                )
 
         # --- Carry-forward connections for dormant repos ---
         if dormant_repos:
@@ -256,18 +285,26 @@ def run(
         # --- Stage: readme ---
         if reclassify_readme:
             n = cache.evict_null_readme_classes(org)
-            console.print(f"[cyan]--reclassify-readme: evicted {n} null readme_class cache entries.")
+            console.print(
+                f"[cyan]--reclassify-readme: evicted {n} null readme_class cache entries."
+            )
         if checkpoint_mod.is_complete(ckpt, "readme"):
             console.print(f"[yellow]readme: restored {len(readme_classes)} repos from checkpoint.")
         elif no_llm:
             console.print("[cyan]Classifying READMEs (skipped — --no-llm)")
-            readme_classes = {r.name: {"category": None, "summary": None, "confidence": "n/a"} for r in active_repos}
+            readme_classes = {
+                r.name: {"category": None, "summary": None, "confidence": "n/a"}
+                for r in active_repos
+            }
             _save_ckpt("readme", readme_classes=readme_classes)
         else:
             llm_client = readme_mod.make_client()
             if not llm_client:
                 console.print("[yellow]Skipping README classification (ANTHROPIC_API_KEY not set)")
-                readme_classes = {r.name: {"category": None, "summary": None, "confidence": "n/a"} for r in active_repos}
+                readme_classes = {
+                    r.name: {"category": None, "summary": None, "confidence": "n/a"}
+                    for r in active_repos
+                }
                 _save_ckpt("readme", readme_classes=readme_classes)
             else:
                 with Progress(
@@ -294,7 +331,9 @@ def run(
 
         # --- Stage: contributors ---
         if checkpoint_mod.is_complete(ckpt, "contributors"):
-            console.print(f"[yellow]contributors: restored {len(users)} unique users from checkpoint.")
+            console.print(
+                f"[yellow]contributors: restored {len(users)} unique users from checkpoint."
+            )
         elif active_repos:
             with Progress(
                 SpinnerColumn(),
@@ -359,7 +398,9 @@ def run(
         elapsed = time.monotonic() - start_time
         mins, secs = divmod(int(elapsed), 60)
         console.print()
-        console.print(f"[bold green]Done![/bold green] Reports written to [bold]{output_dir}[/bold]:")
+        console.print(
+            f"[bold green]Done![/bold green] Reports written to [bold]{output_dir}[/bold]:"
+        )
         console.print(f"  [blue]{json_path.name}[/blue]")
         console.print(f"  [blue]{md_path.name}[/blue]")
         for p in csv_paths:

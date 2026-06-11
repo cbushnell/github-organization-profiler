@@ -4,7 +4,7 @@ import time
 from typing import Any
 
 import httpx
-from github import Github, GithubException
+from github import Github
 from github.Organization import Organization
 
 

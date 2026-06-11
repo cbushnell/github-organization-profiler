@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import pytest
 
-DEFAULT_ORG = "github"
 from gh_org_profile.client import get_github, get_org
 from gh_org_profile.collectors.connections import (
     build_topic_clusters,
     collect_active,
     fetch_all_topics,
 )
+
+DEFAULT_ORG = "github"
 
 
 @pytest.mark.integration

@@ -58,6 +58,7 @@ class TestCacheGet:
         p = tmp_path / "org" / "repo" / "col.json"
         old_mtime = time.time() - 7200
         import os
+
         os.utime(p, (old_mtime, old_mtime))
         result = cache_mod.get("org", "repo", "col", max_age_hours=1)
         assert result is None

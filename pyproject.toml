@@ -34,3 +34,19 @@ testpaths = ["tests"]
 markers = [
     "integration: requires real GitHub API (skip with -m 'not integration')",
 ]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/gh_org_profile/reports/render.py" = ["E501"]
+"tests/**" = ["E501"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.16",
+]
