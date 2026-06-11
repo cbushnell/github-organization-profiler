@@ -10,7 +10,7 @@ import pytest
 
 import anthropic
 
-from gh_org_profile.classifiers.readme import _classify_one, _parse_json
+from gh_org_profile.classifiers.readme import _classify_one
 
 # A short but clearly distinctive README for a Python CLI tool.
 # Distinctive enough that the model should reliably categorise it as "CLI Tool".
