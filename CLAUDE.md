@@ -43,6 +43,7 @@ src/gh_org_profile/
 - `--dormancy-days`: Days without push to mark repo dormant (default: 90)
 - `--max-age`: Cache max age in hours; 0 = always re-fetch (default: 24)
 - `--output`: Output directory for reports (default: `./output`)
+- `--workers`: Number of parallel worker threads for repo collection (default: 4)
 
 ### Pipeline (`pipeline.py`)
 
@@ -52,7 +53,7 @@ Main orchestration that:
 3. Enumerates repos via `list_repos()` (shows count before fetching metadata)
 4. Fetches per-repo metadata + READMEs with a live `X/N` progress bar
 5. Classifies repos as active (changed) or dormant (unchanged since last run)
-6. For **active repos**: runs full collectors (commits, quality, connections, contributors)
+6. For **active repos**: runs commits, quality, and connections collectors in parallel via `ThreadPoolExecutor` (controlled by `--workers`)
 7. For **dormant repos**: carries forward connections data only (lightweight)
 8. Classifies all READMEs via LLM (unless `--no-llm`)
 9. Builds, renders, and exports reports
@@ -105,13 +106,15 @@ Pipeline-level checkpoint written to `{org}_checkpoint.json` in the output direc
 - `is_complete(ckpt, stage)`: Returns `True` if `stage` has already been completed in the checkpoint, using ordered stage list
 
 **Stage ordering** (used by `is_complete`):
-`repo_metadata` → `topics` → `commits` → `quality` → `connections` → `readme` → `contributors`
+`repo_metadata` → `topics` → `collection` → `readme` → `contributors`
+
+The `collection` stage covers commits, quality, and connections, which are now run in parallel via `ThreadPoolExecutor`.
 
 **Checkpoint schema:**
 ```json
 {
   "org": "...",
-  "last_stage": "commits",
+  "last_stage": "collection",
   "repo_data": {...},
   "commit_data": {...},
   "quality_data": {...},
@@ -240,11 +243,10 @@ After a run, output directory contains:
 5.  fetch_repo_metadata() per repo → X/N progress bar
 6.  Fetch all topics via GraphQL (single paginated query)
 7.  Classify repos as active/dormant
-8.  Collectors (active repos only, X/N progress per collector):
-    - commits: 6-month bounded window, all metrics derived from one fetch
-    - quality: CI, license, CODEOWNERS, dependabot
-    - connections: forks, deps, workflow refs
-    - users: contributor profiles
+8.  Collectors (active repos only, parallel via ThreadPoolExecutor):
+    - commits + quality + connections run per-repo in parallel (--workers, default 4)
+    - single `collection` checkpoint saved after all futures complete
+    - users: contributor profiles (sequential, after collection)
 9.  Dormant repos: carry forward connections only (no API calls)
 10. Classify READMEs via LLM (or skip with --no-llm)
 11. Build report structure
@@ -353,5 +355,5 @@ def test_something_live(github_token):
 3. **LLM Cost:** Each active repo runs through LLM; consider cost on large orgs. Use `--no-llm` for cost-sensitive runs.
 4. **API Limits:** GitHub allows 5,000 REST calls/hour. Large orgs with many collectors may hit limits; adjust or use token from bot account.
 5. **GraphQL Queries:** Topics fetched via GraphQL upfront for all repos; a single query with pagination.
-6. **Checkpoint & Resume:** `checkpoint.py` is the single source of truth for stage ordering. Adding a new pipeline stage requires adding it to `_STAGES` in `checkpoint.py` and inserting the corresponding `_save_ckpt()` call in `pipeline.py`. Do not change the order of existing stages without migrating existing checkpoint files.
+6. **Checkpoint & Resume:** `checkpoint.py` is the single source of truth for stage ordering. Current stages: `repo_metadata → topics → collection → readme → contributors`. Adding a new pipeline stage requires adding it to `_STAGES` in `checkpoint.py` and inserting the corresponding `_save_ckpt()` call in `pipeline.py`. Do not change the order of existing stages without migrating existing checkpoint files. Old checkpoints with `last_stage: "commits"` or `"quality"` will not be recognized (treated as pre-collection), which is safe.
 7. **Interrupt Safety:** `_flush_on_interrupt` in `pipeline.py` silently swallows its own exceptions (bare `except Exception: pass`) to avoid masking the original error. Keep this handler minimal.

@@ -28,4 +28,6 @@ def get(org: str, repo: str, collector: str, max_age_hours: int) -> Any | None:
 def put(org: str, repo: str, collector: str, data: Any) -> None:
     p = _path(org, repo, collector)
     p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(json.dumps(data, default=str))
+    tmp = p.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, default=str))
+    tmp.rename(p)

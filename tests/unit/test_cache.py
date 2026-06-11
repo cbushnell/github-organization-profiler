@@ -19,6 +19,11 @@ class TestCachePut:
         p = tmp_path / "org" / "repo" / "collector.json"
         assert p.exists()
 
+    def test_no_tmp_file_left_behind(self, tmp_path):
+        cache_mod.put("org", "repo", "collector", {"key": "value"})
+        tmp = tmp_path / "org" / "repo" / "collector.tmp"
+        assert not tmp.exists()
+
     def test_creates_parent_directories(self, tmp_path):
         cache_mod.put("deep-org", "deep-repo", "test", [1, 2, 3])
         p = tmp_path / "deep-org" / "deep-repo" / "test.json"

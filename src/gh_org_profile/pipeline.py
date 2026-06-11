@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -11,6 +12,16 @@ from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, MofNCo
 console = Console()
 
 
+def _collect_repo(repo, org, max_age, commits_mod, quality_mod, connections_mod, token):
+    """Run commits, quality, and connections collectors for one repo. Called from worker threads."""
+    return (
+        repo.name,
+        commits_mod.collect(repo, org, max_age),
+        quality_mod.collect(repo, org, max_age),
+        connections_mod.collect_active(repo, token, org, max_age),
+    )
+
+
 def run(
     org: str,
     token: str,
@@ -19,6 +30,7 @@ def run(
     dormancy_days: int,
     max_age: int,
     output_dir: Path,
+    max_workers: int = 4,
 ) -> None:
     from gh_org_profile import checkpoint as checkpoint_mod
     from gh_org_profile import state as state_mod
@@ -163,55 +175,41 @@ def run(
                 _flush_on_interrupt()
                 console.print(f"[yellow]Rate limit reached — sleeping {wait:.0f}s (checkpoint saved).")
 
-            with Progress(
-                SpinnerColumn(),
-                TextColumn("[progress.description]{task.description}"),
-                BarColumn(),
-                MofNCompleteColumn(),
-                console=console,
-            ) as progress:
-
-                # Stage: commits
-                if checkpoint_mod.is_complete(ckpt, "commits"):
-                    console.print(f"[yellow]commits: restored {len(commit_data)} repos from checkpoint.")
-                else:
-                    rate_limit_sleep(g, on_sleep=_on_rate_sleep)
+            # Stage: collection (commits + quality + connections in parallel)
+            if checkpoint_mod.is_complete(ckpt, "collection"):
+                console.print(
+                    f"[yellow]collection: restored {len(commit_data)} repos from checkpoint."
+                )
+            else:
+                rate_limit_sleep(g, on_sleep=_on_rate_sleep)
+                repos_to_collect = [r for r in active_repos if r.name not in commit_data]
+                with Progress(
+                    SpinnerColumn(),
+                    TextColumn("[progress.description]{task.description}"),
+                    BarColumn(),
+                    MofNCompleteColumn(),
+                    console=console,
+                ) as progress:
                     task = progress.add_task(
-                        f"[green]Commits ({len(active_repos)} active)...", total=len(active_repos)
+                        f"[green]Collecting ({len(repos_to_collect)} repos, {max_workers} workers)...",
+                        total=len(repos_to_collect),
                     )
-                    for repo in active_repos:
-                        if repo.name not in commit_data:
-                            commit_data[repo.name] = commits_mod.collect(repo, org, max_age)
-                        progress.advance(task)
-                    _save_ckpt("commits", commit_data=commit_data)
-
-                # Stage: quality
-                if checkpoint_mod.is_complete(ckpt, "quality"):
-                    console.print(f"[yellow]quality: restored {len(quality_data)} repos from checkpoint.")
-                else:
-                    rate_limit_sleep(g, on_sleep=_on_rate_sleep)
-                    task = progress.add_task(
-                        f"[green]Quality ({len(active_repos)} active)...", total=len(active_repos)
-                    )
-                    for repo in active_repos:
-                        if repo.name not in quality_data:
-                            quality_data[repo.name] = quality_mod.collect(repo, org, max_age)
-                        progress.advance(task)
-                    _save_ckpt("quality", quality_data=quality_data)
-
-                # Stage: connections
-                if checkpoint_mod.is_complete(ckpt, "connections"):
-                    console.print(f"[yellow]connections: restored {len(connections_data)} repos from checkpoint.")
-                else:
-                    rate_limit_sleep(g, on_sleep=_on_rate_sleep)
-                    task = progress.add_task(
-                        f"[green]Connections ({len(active_repos)} active)...", total=len(active_repos)
-                    )
-                    for repo in active_repos:
-                        if repo.name not in connections_data:
-                            connections_data[repo.name] = connections_mod.collect_active(repo, token, org, max_age)
-                        progress.advance(task)
-                    _save_ckpt("connections", connections_data=connections_data)
+                    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+                        futures = {
+                            pool.submit(
+                                _collect_repo, repo, org, max_age,
+                                commits_mod, quality_mod, connections_mod, token,
+                            ): repo
+                            for repo in repos_to_collect
+                        }
+                        for future in as_completed(futures):
+                            name, cd, qd, cod = future.result()
+                            commit_data[name] = cd
+                            quality_data[name] = qd
+                            connections_data[name] = cod
+                            progress.advance(task)
+                _save_ckpt("collection", commit_data=commit_data,
+                           quality_data=quality_data, connections_data=connections_data)
 
         # --- Carry-forward connections for dormant repos ---
         if dormant_repos:

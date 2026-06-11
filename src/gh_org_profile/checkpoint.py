@@ -9,9 +9,7 @@ from typing import Any
 _STAGES = [
     "repo_metadata",
     "topics",
-    "commits",
-    "quality",
-    "connections",
+    "collection",
     "readme",
     "contributors",
 ]
