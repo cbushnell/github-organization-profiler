@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
@@ -17,7 +18,7 @@ def _collect_repo(repo, org, max_age, commits_mod, quality_mod, connections_mod,
     return (
         repo.name,
         commits_mod.collect(repo, org, max_age),
-        quality_mod.collect(repo, org, max_age),
+        quality_mod.collect(repo, org, max_age, token),
         connections_mod.collect_active(repo, token, org, max_age),
     )
 
@@ -31,6 +32,7 @@ def run(
     max_age: int,
     output_dir: Path,
     max_workers: int = 4,
+    max_repos: int | None = None,
 ) -> None:
     from gh_org_profile import checkpoint as checkpoint_mod
     from gh_org_profile import state as state_mod
@@ -46,6 +48,7 @@ def run(
     from gh_org_profile.reports import csv_export
 
     run_at = datetime.now(timezone.utc).isoformat()
+    start_time = time.monotonic()
 
     # --- Checkpoint ---
     ckpt = checkpoint_mod.load(output_dir, org)
@@ -67,6 +70,7 @@ def run(
     repos: list = []
     active_repos: list = []
     dormant_repos: list = []
+    failed_repos: dict = {}
 
     def _save_ckpt(stage: str, **data: Any) -> None:
         checkpoint_mod.save(output_dir, org, stage, **data)
@@ -117,7 +121,7 @@ def run(
         # --- Enumerate repos (always required for PyGithub objects) ---
         console.print(f"[cyan]Fetching repository list for [bold]{org}[/bold]...")
         with console.status("[bold green]Enumerating repositories..."):
-            repos = repos_mod.list_repos(org_obj)
+            repos = repos_mod.list_repos(org_obj, max_repos=max_repos)
         console.print(f"[cyan]Found [bold]{len(repos)}[/bold] public repos.")
 
         # --- Stage: repo_metadata ---
@@ -149,6 +153,19 @@ def run(
                 f"[green]{len(active_repos)} active[/green] / "
                 f"[yellow]{len(dormant_repos)} dormant[/yellow] repos"
             )
+            # B4: report repos that went dormant since the previous run
+            if prev_report:
+                prev_repos = prev_report.get("repos", {})
+                newly_dormant = [
+                    r for r in dormant_repos
+                    if r.name in prev_repos and not prev_repos[r.name].get("dormant", True)
+                ]
+                if newly_dormant:
+                    names = ", ".join(r.name for r in newly_dormant[:5])
+                    suffix = " ..." if len(newly_dormant) > 5 else ""
+                    console.print(
+                        f"[yellow]  Newly dormant ({len(newly_dormant)}): {names}{suffix}"
+                    )
 
         # --- Stage: topics ---
         if checkpoint_mod.is_complete(ckpt, "topics"):
@@ -203,10 +220,15 @@ def run(
                             for repo in repos_to_collect
                         }
                         for future in as_completed(futures):
-                            name, cd, qd, cod = future.result()
-                            commit_data[name] = cd
-                            quality_data[name] = qd
-                            connections_data[name] = cod
+                            repo = futures[future]
+                            try:
+                                name, cd, qd, cod = future.result()
+                                commit_data[name] = cd
+                                quality_data[name] = qd
+                                connections_data[name] = cod
+                            except Exception as exc:
+                                failed_repos[repo.name] = str(exc)
+                                console.print(f"[red]  {repo.name}: collection failed — {exc}[/red]")
                             progress.advance(task)
                 _save_ckpt("collection", commit_data=commit_data,
                            quality_data=quality_data, connections_data=connections_data)
@@ -329,12 +351,19 @@ def run(
         checkpoint_mod.delete(output_dir, org)
 
         # --- Summary ---
+        elapsed = time.monotonic() - start_time
+        mins, secs = divmod(int(elapsed), 60)
         console.print()
         console.print(f"[bold green]Done![/bold green] Reports written to [bold]{output_dir}[/bold]:")
         console.print(f"  [blue]{json_path.name}[/blue]")
         console.print(f"  [blue]{md_path.name}[/blue]")
         for p in csv_paths:
             console.print(f"  [blue]{p.name}[/blue]")
+        if failed_repos:
+            names = ", ".join(list(failed_repos)[:5])
+            suffix = " ..." if len(failed_repos) > 5 else ""
+            console.print(f"[yellow]  {len(failed_repos)} repos failed collection: {names}{suffix}")
+        console.print(f"[dim]Done in {mins}m {secs}s[/dim]")
 
     except (KeyboardInterrupt, Exception):
         _flush_on_interrupt()

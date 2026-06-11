@@ -162,6 +162,36 @@ def build_report(
 
     internal_dep_graph = _build_internal_dep_graph(repos)
 
+    delta = None
+    if prev_report:
+        prev_repos = prev_report.get("repos", {})
+        curr_names = set(repos.keys())
+        prev_names = set(prev_repos.keys())
+
+        quality_changes = {}
+        for name in curr_names & prev_names:
+            prev_q = (prev_repos[name].get("quality") or {}).get("quality_score", 0)
+            curr_q = repos[name]["quality"]["quality_score"]
+            if curr_q != prev_q:
+                quality_changes[name] = {"from": prev_q, "to": curr_q}
+
+        delta = {
+            "repos_added": sorted(curr_names - prev_names),
+            "repos_removed": sorted(prev_names - curr_names),
+            "quality_changes": quality_changes,
+            "active_to_dormant": sorted(
+                n for n in curr_names & prev_names
+                if repos[n]["dormant"] and not prev_repos[n].get("dormant", True)
+            ),
+            "dormant_to_active": sorted(
+                n for n in curr_names & prev_names
+                if not repos[n]["dormant"] and prev_repos[n].get("dormant", False)
+            ),
+            "new_contributors": sorted(
+                set(users.keys()) - set((prev_report.get("users") or {}).keys())
+            ),
+        }
+
     return {
         "org": org,
         "generated_at": run_at,
@@ -174,4 +204,5 @@ def build_report(
             "topic_clusters": topic_clusters,
             "internal_dep_graph": internal_dep_graph,
         },
+        "delta": delta,
     }

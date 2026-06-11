@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from github import Github, GithubException
@@ -10,10 +9,7 @@ from gh_org_profile.client import safe_sleep
 
 
 def collect_repo_contributors(repo, users: dict, org: str, max_age: int) -> None:
-    """Fetch contributors + first/last commit dates (6-month bound) for one repo.
-
-    Updates the shared users dict in-place.
-    """
+    """Fetch contributors for one repo and update the shared users dict in-place."""
     cached = cache.get(org, repo.name, "contributors", max_age)
     if cached:
         contributors = cached
@@ -43,25 +39,6 @@ def collect_repo_contributors(repo, users: dict, org: str, max_age: int) -> None
             "first_commit": None,
             "last_commit": None,
         }
-
-    # Enrich first/last commit dates using a 6-month bound
-    since_6m = datetime.now(timezone.utc) - timedelta(days=180)
-    try:
-        commits = list(repo.get_commits(since=since_6m))
-    except GithubException:
-        return
-    for c in commits:
-        login = c.author.login if c.author else None
-        if not login or login not in users:
-            continue
-        if repo.name not in users[login]["org_repos_contributed"]:
-            continue
-        dt_str = c.commit.author.date.replace(tzinfo=timezone.utc).isoformat()
-        rec = users[login]["org_repos_contributed"][repo.name]
-        if rec["first_commit"] is None or dt_str < rec["first_commit"]:
-            rec["first_commit"] = dt_str
-        if rec["last_commit"] is None or dt_str > rec["last_commit"]:
-            rec["last_commit"] = dt_str
 
 
 def fetch_user_profile(login: str, users: dict, g: Github, org: str, max_age: int) -> None:

@@ -43,6 +43,9 @@ def main(
     workers: int = typer.Option(
         4, "--workers", help="Number of parallel workers for repo collection (default: 4)"
     ),
+    max_repos: Optional[int] = typer.Option(
+        None, "--max-repos", help="Limit number of repos processed (useful for testing)"
+    ),
 ) -> None:
     if not token:
         typer.echo("Error: --token or GITHUB_TOKEN env var is required", err=True)
@@ -60,4 +63,5 @@ def main(
         max_age=max_age,
         output_dir=output,
         max_workers=workers,
+        max_repos=max_repos,
     )

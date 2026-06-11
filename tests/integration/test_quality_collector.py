@@ -25,29 +25,29 @@ class TestQualityCollector:
         org = get_org(g, DEFAULT_ORG)
         return org.get_repo("linguist")
 
-    def test_returns_all_expected_keys(self, hello_world):
-        result = collect(hello_world, DEFAULT_ORG, max_age=0)
+    def test_returns_all_expected_keys(self, hello_world, github_token):
+        result = collect(hello_world, DEFAULT_ORG, max_age=0, token=github_token)
         for key in _BOOL_FIELDS + ["license_spdx", "action_workflows"]:
             assert key in result
 
-    def test_boolean_fields_are_bool(self, hello_world):
-        result = collect(hello_world, DEFAULT_ORG, max_age=0)
+    def test_boolean_fields_are_bool(self, hello_world, github_token):
+        result = collect(hello_world, DEFAULT_ORG, max_age=0, token=github_token)
         for field in _BOOL_FIELDS:
             assert isinstance(result[field], bool), f"{field} should be bool"
 
-    def test_hello_world_has_license(self, hello_world):
-        result = collect(hello_world, DEFAULT_ORG, max_age=0)
+    def test_hello_world_has_license(self, hello_world, github_token):
+        result = collect(hello_world, DEFAULT_ORG, max_age=0, token=github_token)
         assert result["has_license"] is True
 
-    def test_action_workflows_is_list(self, hello_world):
-        result = collect(hello_world, DEFAULT_ORG, max_age=0)
+    def test_action_workflows_is_list(self, hello_world, github_token):
+        result = collect(hello_world, DEFAULT_ORG, max_age=0, token=github_token)
         assert isinstance(result["action_workflows"], list)
 
-    def test_quality_score_not_in_result(self, hello_world):
+    def test_quality_score_not_in_result(self, hello_world, github_token):
         # quality_score is computed by builder.py, not quality.py
-        result = collect(hello_world, DEFAULT_ORG, max_age=0)
+        result = collect(hello_world, DEFAULT_ORG, max_age=0, token=github_token)
         assert "quality_score" not in result
 
-    def test_license_spdx_is_string_or_none(self, hello_world):
-        result = collect(hello_world, DEFAULT_ORG, max_age=0)
+    def test_license_spdx_is_string_or_none(self, hello_world, github_token):
+        result = collect(hello_world, DEFAULT_ORG, max_age=0, token=github_token)
         assert result["license_spdx"] is None or isinstance(result["license_spdx"], str)

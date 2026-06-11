@@ -56,12 +56,12 @@ class TestMarkdownContent:
     def test_active_repos_section_present(self, sample_report, tmp_path):
         _, md_path = render(sample_report, tmp_path, "test-org", [])
         content = md_path.read_text()
-        assert "### Active" in content
+        assert "## Active Repositories" in content
 
     def test_dormant_repos_section_present(self, sample_report, tmp_path):
         _, md_path = render(sample_report, tmp_path, "test-org", [])
         content = md_path.read_text()
-        assert "### Dormant" in content
+        assert "## Dormant Repositories" in content
 
     def test_repo_names_appear_in_markdown(self, sample_report, tmp_path):
         _, md_path = render(sample_report, tmp_path, "test-org", [])

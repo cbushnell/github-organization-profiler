@@ -44,6 +44,7 @@ src/gh_org_profile/
 - `--max-age`: Cache max age in hours; 0 = always re-fetch (default: 24)
 - `--output`: Output directory for reports (default: `./output`)
 - `--workers`: Number of parallel worker threads for repo collection (default: 4)
+- `--max-repos`: Limit number of repos processed (useful for testing / LLM cost control)
 
 ### Pipeline (`pipeline.py`)
 
@@ -52,11 +53,12 @@ Main orchestration that:
 2. Connects to GitHub
 3. Enumerates repos via `list_repos()` (shows count before fetching metadata)
 4. Fetches per-repo metadata + READMEs with a live `X/N` progress bar
-5. Classifies repos as active (changed) or dormant (unchanged since last run)
-6. For **active repos**: runs commits, quality, and connections collectors in parallel via `ThreadPoolExecutor` (controlled by `--workers`)
+5. Classifies repos as active (changed) or dormant (unchanged since last run); prints newly-dormant repos
+6. For **active repos**: runs commits, quality, and connections collectors in parallel via `ThreadPoolExecutor` (controlled by `--workers`); per-repo errors are isolated and logged rather than crashing the run
 7. For **dormant repos**: carries forward connections data only (lightweight)
 8. Classifies all READMEs via LLM (unless `--no-llm`)
 9. Builds, renders, and exports reports
+10. Prints elapsed time and any failed repos in the final summary
 
 **Key Design:** Dormancy detection avoids expensive re-collection of metadata for unchanged repositories, enabling fast subsequent runs.
 
@@ -152,17 +154,19 @@ Analyzes commit activity using a **6-month bounded window** — a single `get_co
 
 #### `users.py`
 Collects contributor profiles:
-- Per-repo contributor list with commit counts
-- User bio, company, location, public repos count
+- Per-repo contributor list with commit counts (via `repo.get_contributors()`)
+- User bio, company, location, public repos count (via `fetch_user_profile()`)
 - Aggregates across org
+- `first_commit` / `last_commit` fields are always `None` (removed duplicate `get_commits()` call — commit data is already collected by `commits.py`)
 
 #### `quality.py`
-Scans for quality signals:
-- Presence of LICENSE, CONTRIBUTING, CODEOWNERS, SECURITY.md
-- GitHub Actions workflows
-- Dependabot configuration
-- Issues enabled status
-- Computes quality_score (0-7 based on presence flags)
+Scans for quality signals using a **single GraphQL query per repo** instead of multiple REST calls:
+- Presence of LICENSE, CONTRIBUTING, CODEOWNERS, SECURITY.md, Dependabot config — all checked via `object(expression: "HEAD:<path>")` in one query; missing paths return `null`, no exception
+- `licenseInfo { spdxId }` replaces the separate `get_license()` REST call
+- GitHub Actions workflows — still 1 REST call via `repo.get_workflows()` (needed for workflow names)
+- Issues enabled status — from the PyGithub repo object
+- `collect(repo, org, max_age, token)` — `token` is required for the GraphQL call
+- **Savings: ~6–8 REST calls per repo replaced by 1 GraphQL query (~35–40% total reduction)**
 
 #### `connections.py`
 Analyzes repository relationships:
@@ -189,28 +193,42 @@ Uses Anthropic API to classify README content:
 ### Reports (`reports/`)
 
 #### `builder.py`
-Assembles all collected data into a structured report dict:
+Assembles all collected data into a structured report dict. When a previous report exists, also computes a `delta` section with:
+- `repos_added` / `repos_removed` since last run
+- `quality_changes`: repos whose quality score changed (with before/after)
+- `active_to_dormant` / `dormant_to_active` transitions
+- `new_contributors` since last run
 
 **Report Structure:**
 ```
 {
-  "metadata": {org, run_at, ...},
-  "summary": {active_count, dormant_count, contributor_count, ...},
-  "repositories": {
+  "org", "generated_at", "prev_run_at",
+  "active_repo_count", "dormant_repo_count",
+  "users": {...},
+  "repos": {
     "repo_name": {
-      "url", "description", "activity", "quality",
-      "readme_class", "topics", "connections", ...
+      "dormant", "dormant_since", "activity", "quality",
+      "readme_class", "connections", ...
     }
   },
-  "contributors": {...},
-  "topic_clusters": {...},
+  "connections_summary": {"topic_clusters", "internal_dep_graph"},
+  "delta": {   // null on first run
+    "repos_added", "repos_removed", "quality_changes",
+    "active_to_dormant", "dormant_to_active", "new_contributors"
+  }
 }
 ```
 
 #### `render.py`
 Generates output files:
 - **JSON:** Structured report → `{org}_report.json`
-- **Markdown:** Human-readable narrative with embedded tables → `{org}_report.md`
+- **Markdown:** Human-readable report with:
+  - Table of contents with anchor links
+  - Top 5 contributors by commit count in the summary
+  - "Changes Since Last Run" section (from `delta`, omitted on first run)
+  - Active repos sorted by quality score **ascending** (worst first)
+  - "Repos Needing README Attention" callout (category null or confidence low)
+  - Dormant repos table sorted alphabetically
 
 #### `csv_export.py`
 Exports tabular sections as CSV:
@@ -239,20 +257,21 @@ After a run, output directory contains:
 1.  CLI: Parse args, load .env
 2.  Pipeline: Load previous state + report
 3.  GitHub connection
-4.  list_repos() → enumerate all public repos (spinner, shows count)
+4.  list_repos() → enumerate all public repos (spinner, shows count); --max-repos limits total
 5.  fetch_repo_metadata() per repo → X/N progress bar
 6.  Fetch all topics via GraphQL (single paginated query)
-7.  Classify repos as active/dormant
+7.  Classify repos as active/dormant; print newly-dormant repos
 8.  Collectors (active repos only, parallel via ThreadPoolExecutor):
-    - commits + quality + connections run per-repo in parallel (--workers, default 4)
+    - commits + quality (GraphQL) + connections run per-repo in parallel (--workers, default 4)
+    - per-repo errors isolated; failed repos logged, run continues
     - single `collection` checkpoint saved after all futures complete
     - users: contributor profiles (sequential, after collection)
 9.  Dormant repos: carry forward connections only (no API calls)
 10. Classify READMEs via LLM (or skip with --no-llm)
-11. Build report structure
+11. Build report structure (including delta vs previous run)
 12. Render JSON, Markdown, CSV
 13. Save state for next run
-14. Print summary
+14. Print summary with elapsed time and any failed repos
 ```
 
 ## Key Design Patterns
