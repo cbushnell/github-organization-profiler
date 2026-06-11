@@ -83,6 +83,8 @@ gh-org-profile --org <name> --max-repos 10
 | `{org}_*.csv` | CSV | Tabular exports (repos, contributors, topics, quality, commits) |
 | `{org}_state.json` | JSON | Run state; used for dormancy detection on next run |
 
+See [REPORT_SCHEMA.md](REPORT_SCHEMA.md) for a full breakdown of every field in the JSON report and CSV tables.
+
 ## License
 
 CC0 1.0 — public domain. See `LICENSE`.
