@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
@@ -138,18 +136,78 @@ class TestExtractSummary:
 @pytest.mark.parametrize(
     "repo_name,readme,topics,expected_category",
     [
-        ("ml-trainer", "PyTorch model fine-tuning for NLP and deep learning tasks.", ["pytorch", "nlp"], "ML / AI"),
-        ("etl-runner", "Apache Airflow DAG for Kafka stream data ingestion.", ["etl", "airflow"], "Data Pipeline / ETL"),
-        ("infra-core", "Terraform and Ansible modules for Kubernetes clusters.", ["terraform", "kubernetes"], "Infrastructure / IaC"),
-        ("design-kit", "Our design system and component library using Storybook and design tokens.", ["design-system", "storybook"], "Design System"),
-        ("deploy-cli", "A command-line tool. Usage: deploy-cli --flag. Built with click.", ["cli"], "CLI Tool"),
-        ("data-api", "REST API and GraphQL endpoint for data service. Built with FastAPI.", ["api", "fastapi"], "API / Data Service"),
-        ("web-app", "React and Next.js frontend application for the dashboard.", ["react", "frontend"], "Frontend / UI"),
-        ("py-sdk", "Python library and SDK. pip install mysdk. Distributed on PyPI.", ["python", "sdk"], "Python Library / SDK"),
-        ("dotfiles", "Shared dotfiles and linting configuration with pre-commit hooks.", ["dotfiles", "configuration"], "Configuration / Shared Tooling"),
-        ("demo-app", "Example and tutorial quickstart template for getting started.", ["example", "tutorial"], "Example / Demo"),
-        ("docs-site", "Documentation and reference wiki built with MkDocs.", ["documentation", "docs"], "Documentation / Reference"),
-        ("old-service", "Deprecated. This service is archived and no longer maintained.", ["archived"], "Archive / Deprecated"),
+        (
+            "ml-trainer",
+            "PyTorch model fine-tuning for NLP and deep learning tasks.",
+            ["pytorch", "nlp"],
+            "ML / AI",
+        ),
+        (
+            "etl-runner",
+            "Apache Airflow DAG for Kafka stream data ingestion.",
+            ["etl", "airflow"],
+            "Data Pipeline / ETL",
+        ),
+        (
+            "infra-core",
+            "Terraform and Ansible modules for Kubernetes clusters.",
+            ["terraform", "kubernetes"],
+            "Infrastructure / IaC",
+        ),
+        (
+            "design-kit",
+            "Our design system and component library using Storybook and design tokens.",
+            ["design-system", "storybook"],
+            "Design System",
+        ),
+        (
+            "deploy-cli",
+            "A command-line tool. Usage: deploy-cli --flag. Built with click.",
+            ["cli"],
+            "CLI Tool",
+        ),
+        (
+            "data-api",
+            "REST API and GraphQL endpoint for data service. Built with FastAPI.",
+            ["api", "fastapi"],
+            "API / Data Service",
+        ),
+        (
+            "web-app",
+            "React and Next.js frontend application for the dashboard.",
+            ["react", "frontend"],
+            "Frontend / UI",
+        ),
+        (
+            "py-sdk",
+            "Python library and SDK. pip install mysdk. Distributed on PyPI.",
+            ["python", "sdk"],
+            "Python Library / SDK",
+        ),
+        (
+            "dotfiles",
+            "Shared dotfiles and linting configuration with pre-commit hooks.",
+            ["dotfiles", "configuration"],
+            "Configuration / Shared Tooling",
+        ),
+        (
+            "demo-app",
+            "Example and tutorial quickstart template for getting started.",
+            ["example", "tutorial"],
+            "Example / Demo",
+        ),
+        (
+            "docs-site",
+            "Documentation and reference wiki built with MkDocs.",
+            ["documentation", "docs"],
+            "Documentation / Reference",
+        ),
+        (
+            "old-service",
+            "Deprecated. This service is archived and no longer maintained.",
+            ["archived"],
+            "Archive / Deprecated",
+        ),
         ("misc-tool", "A thing that manages widgets.", [], "Other"),
     ],
 )
