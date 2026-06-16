@@ -7,12 +7,13 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: CC0-1.0](https://img.shields.io/badge/License-CC0_1.0-lightgrey.svg)](http://creativecommons.org/publicdomain/zero/1.0/)
 
-Profile all public repositories in a GitHub organization — commit activity, quality signals, LLM-classified READMEs, and multi-format reports.
+Profile all public repositories in a GitHub organization — commit activity, quality signals, keyword-classified READMEs (no API key needed), and multi-format reports.
 
 ## Features
 
 - Collects metadata, commit frequency, quality signals, topics, fork graph, and contributor profiles for every public repo
-- Classifies READMEs into 13 categories via Claude Haiku (API/CLI/Library/Infrastructure/etc.)
+- Classifies READMEs into 13 categories using a local keyword classifier — no API key required (API/CLI/Library/Infrastructure/etc.)
+- Selective stage execution: re-run only the parts you need (e.g. `--stages readme` or `--stages contributors`)
 - Incremental: dormant repos (no push activity since last run) skip expensive re-collection
 - Interrupt-safe: checkpoints after each stage; resumes automatically on next run
 - Outputs JSON, Markdown, and CSV reports
@@ -22,7 +23,6 @@ Profile all public repositories in a GitHub organization — commit activity, qu
 
 - Python ≥ 3.11
 - A GitHub personal access token (PAT) with `repo:read` or `public_repo` scope
-- An Anthropic API key (optional — only needed for LLM README classification)
 
 ## Installation
 
@@ -38,7 +38,6 @@ Environment variables (can also use a `.env` file):
 
 ```
 GITHUB_TOKEN=ghp_...
-ANTHROPIC_API_KEY=sk-ant-...   # optional — skip with --no-llm
 ```
 
 ## Usage
@@ -50,14 +49,17 @@ github-organization-profiler --org <name>
 Common examples:
 
 ```bash
-# Skip LLM classification (faster, no Anthropic key needed)
-github-organization-profiler --org <name> --no-llm
-
 # Force full re-collection (ignore dormancy + discard checkpoint)
 github-organization-profiler --org <name> --full-refresh
 
-# Re-run only README classification (fix stale null classifications)
-github-organization-profiler --org <name> --reclassify-readme
+# Re-run only README classification (fast, no API needed)
+github-organization-profiler --org <name> --stages readme
+
+# Refresh contributor profiles only
+github-organization-profiler --org <name> --stages contributors
+
+# Refresh commit metrics and re-classify READMEs
+github-organization-profiler --org <name> --stages collection,readme
 
 # Write reports to a custom directory
 github-organization-profiler --org <name> --output ./reports
@@ -72,12 +74,11 @@ github-organization-profiler --org <name> --max-repos 10
 |--------|---------|-------------|
 | `--org` | *(required)* | GitHub organization name |
 | `--token` | `$GITHUB_TOKEN` | GitHub personal access token |
-| `--no-llm` | off | Skip LLM README classification |
 | `--full-refresh` | off | Re-collect all repos; discard checkpoint |
-| `--reclassify-readme` | off | Evict null cached README classifications and re-run LLM |
+| `--stages` | *(all)* | Comma-separated stages to run: `topics,collection,readme,contributors`. Omit to run all. Mutually exclusive with `--full-refresh`. |
 | `--dormancy-days` | `90` | Days without a push to mark a repo dormant |
 | `--max-age` | `24` | Cache max age in hours (0 = always re-fetch) |
-| `--output` | `./output` | Directory for report files |
+| `--output` | `./<org>` | Directory for report files |
 | `--workers` | `4` | Parallel worker threads for repo collection |
 | `--max-repos` | *(none)* | Cap on number of repos processed |
 
