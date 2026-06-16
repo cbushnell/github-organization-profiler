@@ -1,6 +1,7 @@
 """Unit tests for selective stage execution."""
 
 from __future__ import annotations
+from unittest.mock import patch
 
 import pytest
 from typer.testing import CliRunner
@@ -69,12 +70,14 @@ class TestStagesCliParsing:
         assert "mutually exclusive" in result.output
 
     def test_valid_stages_accepted(self):
-        # Should not error on stage validation (will fail later on missing GitHub connection,
-        # but exit code ≠ 1 from validation)
-        result = runner.invoke(
-            app, ["--org", "x", "--token", "t", "--stages", "readme,contributors"]
-        )
-        # Exit code 1 here is from missing GitHub connection, not stage validation
+        # Mock pipeline.run so no filesystem or network access occurs
+        with patch("github_organization_profiler.pipeline.run") as mock_run:
+            result = runner.invoke(
+                app, ["--org", "myorg", "--token", "t", "--stages", "readme,contributors"]
+            )
+        assert result.exit_code == 0
+        assert mock_run.called
+        assert mock_run.call_args.kwargs["stages"] == {"readme", "contributors"}
         assert "unknown stage" not in result.output
         assert "mutually exclusive" not in result.output
 

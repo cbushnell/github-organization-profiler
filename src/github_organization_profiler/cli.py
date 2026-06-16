@@ -74,7 +74,6 @@ def main(
         run_stages = requested
 
     output_dir = output if output is not None else Path(org)
-    output_dir.mkdir(parents=True, exist_ok=True)
 
     from github_organization_profiler import pipeline
 

@@ -98,6 +98,8 @@ def run(
     run_stages = stages if stages is not None else _ALL_STAGES
     partial_run = run_stages != _ALL_STAGES
 
+    output_dir.mkdir(parents=True, exist_ok=True)
+
     run_at = datetime.now(UTC).isoformat()
     start_time = time.monotonic()
 
