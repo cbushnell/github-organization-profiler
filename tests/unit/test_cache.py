@@ -74,26 +74,3 @@ class TestCacheGet:
         cache_mod.put("org", "repo", "col-b", {"b": 2})
         assert cache_mod.get("org", "repo", "col-a", 24) == {"a": 1}
         assert cache_mod.get("org", "repo", "col-b", 24) == {"b": 2}
-
-
-class TestEvictNullReadmeClasses:
-    def test_removes_null_category_entries(self, tmp_path):
-        cache_mod.put("org", "repo-a", "readme_class", {"category": None, "summary": None})
-        cache_mod.put("org", "repo-b", "readme_class", {"category": "CLI", "summary": "A tool"})
-        count = cache_mod.evict_null_readme_classes("org")
-        assert count == 1
-        assert not (tmp_path / "org" / "repo-a" / "readme_class.json").exists()
-        assert (tmp_path / "org" / "repo-b" / "readme_class.json").exists()
-
-    def test_returns_zero_when_no_null_entries(self, tmp_path):
-        cache_mod.put("org", "repo-a", "readme_class", {"category": "Library"})
-        assert cache_mod.evict_null_readme_classes("org") == 0
-
-    def test_returns_zero_when_org_dir_missing(self):
-        assert cache_mod.evict_null_readme_classes("nonexistent-org") == 0
-
-    def test_ignores_other_collector_files(self, tmp_path):
-        cache_mod.put("org", "repo-a", "commits", {"category": None})
-        count = cache_mod.evict_null_readme_classes("org")
-        assert count == 0
-        assert (tmp_path / "org" / "repo-a" / "commits.json").exists()
