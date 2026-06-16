@@ -7,12 +7,12 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: CC0-1.0](https://img.shields.io/badge/License-CC0_1.0-lightgrey.svg)](http://creativecommons.org/publicdomain/zero/1.0/)
 
-Profile all public repositories in a GitHub organization — commit activity, quality signals, keyword-classified READMEs (no API key needed), and multi-format reports.
+Profile all public repositories in a GitHub organization — commit activity, quality signals, keyword-classified READMEs, and multi-format reports.
 
 ## Features
 
 - Collects metadata, commit frequency, quality signals, topics, fork graph, and contributor profiles for every public repo
-- Classifies READMEs into 13 categories using a local keyword classifier — no API key required (API/CLI/Library/Infrastructure/etc.)
+- Classifies READMEs into 13 categories using a local keyword classifier (API/CLI/Library/Infrastructure/etc.)
 - Selective stage execution: re-run only the parts you need (e.g. `--stages readme` or `--stages contributors`)
 - Incremental: dormant repos (no push activity since last run) skip expensive re-collection
 - Interrupt-safe: checkpoints after each stage; resumes automatically on next run
