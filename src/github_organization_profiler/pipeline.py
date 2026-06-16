@@ -26,19 +26,16 @@ def _collect_repo(repo, org, max_age, commits_mod, quality_mod, connections_mod,
 def run(
     org: str,
     token: str,
-    no_llm: bool,
     full_refresh: bool,
     dormancy_days: int,
     max_age: int,
     output_dir: Path,
     max_workers: int = 4,
     max_repos: int | None = None,
-    reclassify_readme: bool = False,
 ) -> None:
-    from github_organization_profiler import cache
     from github_organization_profiler import checkpoint as checkpoint_mod
     from github_organization_profiler import state as state_mod
-    from github_organization_profiler.classifiers import readme as readme_mod
+    from github_organization_profiler.classifiers import local as local_mod
     from github_organization_profiler.client import get_github, get_org, rate_limit_sleep
     from github_organization_profiler.collectors import commits as commits_mod
     from github_organization_profiler.collectors import connections as connections_mod
@@ -283,50 +280,34 @@ def run(
                     progress.advance(task)
 
         # --- Stage: readme ---
-        if reclassify_readme:
-            n = cache.evict_null_readme_classes(org)
-            console.print(
-                f"[cyan]--reclassify-readme: evicted {n} null readme_class cache entries."
-            )
         if checkpoint_mod.is_complete(ckpt, "readme"):
             console.print(f"[yellow]readme: restored {len(readme_classes)} repos from checkpoint.")
-        elif no_llm:
-            console.print("[cyan]Classifying READMEs (skipped — --no-llm)")
-            readme_classes = {
-                r.name: {"category": None, "summary": None, "confidence": "n/a"}
-                for r in active_repos
-            }
-            _save_ckpt("readme", readme_classes=readme_classes)
         else:
-            llm_client = readme_mod.make_client()
-            if not llm_client:
-                console.print("[yellow]Skipping README classification (ANTHROPIC_API_KEY not set)")
-                readme_classes = {
-                    r.name: {"category": None, "summary": None, "confidence": "n/a"}
-                    for r in active_repos
-                }
-                _save_ckpt("readme", readme_classes=readme_classes)
-            else:
-                with Progress(
-                    SpinnerColumn(),
-                    TextColumn("[progress.description]{task.description}"),
-                    BarColumn(),
-                    MofNCompleteColumn(),
-                    console=console,
-                ) as progress:
-                    task = progress.add_task(
-                        f"[green]Classifying READMEs ({len(active_repos)} active)...",
-                        total=len(active_repos),
-                    )
-                    for repo in active_repos:
-                        if repo.name not in readme_classes:
-                            readme = (repo_data.get(repo.name) or {}).get("readme") or ""
-                            readme_classes[repo.name] = readme_mod.classify_one_cached(
-                                llm_client, repo.name, readme, org, max_age
-                            )
-                        progress.advance(task)
-                _save_ckpt("readme", readme_classes=readme_classes)
-        readme_classes_dormant = readme_mod.carry_forward_dormant(dormant_repos, org)
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                MofNCompleteColumn(),
+                console=console,
+            ) as progress:
+                task = progress.add_task(
+                    f"[green]Classifying READMEs ({len(active_repos)} active)...",
+                    total=len(active_repos),
+                )
+                for repo in active_repos:
+                    if repo.name not in readme_classes:
+                        meta = repo_data.get(repo.name) or {}
+                        readme_classes[repo.name] = local_mod.classify_one_cached(
+                            repo.name,
+                            meta.get("readme") or "",
+                            meta.get("description"),
+                            meta.get("topics") or [],
+                            org,
+                            max_age,
+                        )
+                    progress.advance(task)
+            _save_ckpt("readme", readme_classes=readme_classes)
+        readme_classes_dormant = local_mod.carry_forward_dormant(dormant_repos, org)
         readme_classes.update(readme_classes_dormant)
 
         # --- Stage: contributors ---

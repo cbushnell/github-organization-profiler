@@ -23,7 +23,6 @@ def main(
     token: str | None = typer.Option(
         None, "--token", envvar="GITHUB_TOKEN", help="GitHub personal access token"
     ),
-    no_llm: bool = typer.Option(False, "--no-llm", help="Skip LLM README classification"),
     full_refresh: bool = typer.Option(
         False, "--full-refresh", help="Re-collect all repos regardless of state"
     ),
@@ -42,11 +41,6 @@ def main(
     max_repos: int | None = typer.Option(
         None, "--max-repos", help="Limit number of repos processed (useful for testing)"
     ),
-    reclassify_readme: bool = typer.Option(
-        False,
-        "--reclassify-readme",
-        help="Clear cached null README classifications and re-run LLM classification only",
-    ),
 ) -> None:
     if not token:
         typer.echo("Error: --token or GITHUB_TOKEN env var is required", err=True)
@@ -60,12 +54,10 @@ def main(
     pipeline.run(
         org=org,
         token=token,
-        no_llm=no_llm,
         full_refresh=full_refresh,
         dormancy_days=dormancy_days,
         max_age=max_age,
         output_dir=output_dir,
         max_workers=workers,
         max_repos=max_repos,
-        reclassify_readme=reclassify_readme,
     )
