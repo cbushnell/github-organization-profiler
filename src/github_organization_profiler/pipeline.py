@@ -32,20 +32,26 @@ def _seed_from_prev_report(
     for name, repo in prev_report.get("repos", {}).items():
         if "collection" not in stages:
             activity = repo.get("activity") or {}
-            commit_data.setdefault(name, {
-                "last_commit_at": activity.get("last_commit_at"),
-                "total_commits": activity.get("total_commits", 0),
-                "commit_frequency_30d": activity.get("commit_frequency_30d", 0),
-                "commit_frequency_90d": activity.get("commit_frequency_90d", 0),
-            })
+            commit_data.setdefault(
+                name,
+                {
+                    "last_commit_at": activity.get("last_commit_at"),
+                    "total_commits": activity.get("total_commits", 0),
+                    "commit_frequency_30d": activity.get("commit_frequency_30d", 0),
+                    "commit_frequency_90d": activity.get("commit_frequency_90d", 0),
+                },
+            )
             quality_data.setdefault(name, repo.get("quality") or {})
             conns = repo.get("connections") or {}
-            connections_data.setdefault(name, {
-                "fork_of": conns.get("fork_of"),
-                "forks": conns.get("forks", []),
-                "internal_package_deps": conns.get("internal_package_deps", []),
-                "reusable_workflow_refs": conns.get("reusable_workflow_refs", []),
-            })
+            connections_data.setdefault(
+                name,
+                {
+                    "fork_of": conns.get("fork_of"),
+                    "forks": conns.get("forks", []),
+                    "internal_package_deps": conns.get("internal_package_deps", []),
+                    "reusable_workflow_refs": conns.get("reusable_workflow_refs", []),
+                },
+            )
         if "readme" not in stages:
             readme_classes.setdefault(name, repo.get("readme_class") or _NULL_README)
         if "topics" not in stages:
@@ -186,9 +192,15 @@ def run(
             )
             if prev_report:
                 _seed_from_prev_report(
-                    prev_report, run_stages,
-                    commit_data, quality_data, connections_data,
-                    readme_classes, users, topic_clusters, repo_data,
+                    prev_report,
+                    run_stages,
+                    commit_data,
+                    quality_data,
+                    connections_data,
+                    readme_classes,
+                    users,
+                    topic_clusters,
+                    repo_data,
                 )
             else:
                 console.print(

@@ -1,9 +1,9 @@
 """Unit tests for selective stage execution."""
 
 from __future__ import annotations
+
 from unittest.mock import patch
 
-import pytest
 from typer.testing import CliRunner
 
 from github_organization_profiler.cli import app
@@ -270,8 +270,13 @@ class TestSeedNoPrevReport:
         _seed_from_prev_report(
             {},
             {"readme"},
-            commit_data, quality_data, connections_data,
-            readme_classes, users, topic_clusters, repo_data,
+            commit_data,
+            quality_data,
+            connections_data,
+            readme_classes,
+            users,
+            topic_clusters,
+            repo_data,
         )
         assert commit_data == {}
         assert readme_classes == {}
