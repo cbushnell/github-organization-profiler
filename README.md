@@ -52,7 +52,7 @@ Common examples:
 # Force full re-collection (ignore dormancy + discard checkpoint)
 github-organization-profiler --org <name> --full-refresh
 
-# Re-run only README classification (fast, no API needed)
+# Re-run only README classification
 github-organization-profiler --org <name> --stages readme
 
 # Refresh contributor profiles only
