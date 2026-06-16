@@ -23,7 +23,6 @@ def main(
     token: str | None = typer.Option(
         None, "--token", envvar="GITHUB_TOKEN", help="GitHub personal access token"
     ),
-    no_llm: bool = typer.Option(False, "--no-llm", help="Skip LLM README classification"),
     full_refresh: bool = typer.Option(
         False, "--full-refresh", help="Re-collect all repos regardless of state"
     ),
@@ -42,30 +41,50 @@ def main(
     max_repos: int | None = typer.Option(
         None, "--max-repos", help="Limit number of repos processed (useful for testing)"
     ),
-    reclassify_readme: bool = typer.Option(
-        False,
-        "--reclassify-readme",
-        help="Clear cached null README classifications and re-run LLM classification only",
+    stages: str | None = typer.Option(
+        None,
+        "--stages",
+        help=(
+            "Comma-separated list of stages to run: topics,collection,readme,contributors. "
+            "Omit to run all stages. repo_metadata always runs. "
+            "Requires a previous report to exist for skipped stages."
+        ),
     ),
 ) -> None:
     if not token:
         typer.echo("Error: --token or GITHUB_TOKEN env var is required", err=True)
         raise typer.Exit(1)
 
+    _ALL_SELECTABLE = {"topics", "collection", "readme", "contributors"}
+
+    run_stages: set[str] | None = None
+    if stages:
+        if full_refresh:
+            typer.echo("Error: --stages and --full-refresh are mutually exclusive", err=True)
+            raise typer.Exit(1)
+        requested = {s.strip() for s in stages.split(",")}
+        invalid = requested - _ALL_SELECTABLE
+        if invalid:
+            typer.echo(
+                f"Error: unknown stage(s): {', '.join(sorted(invalid))}. "
+                f"Valid: {', '.join(sorted(_ALL_SELECTABLE))}",
+                err=True,
+            )
+            raise typer.Exit(1)
+        run_stages = requested
+
     output_dir = output if output is not None else Path(org)
-    output_dir.mkdir(parents=True, exist_ok=True)
 
     from github_organization_profiler import pipeline
 
     pipeline.run(
         org=org,
         token=token,
-        no_llm=no_llm,
         full_refresh=full_refresh,
         dormancy_days=dormancy_days,
         max_age=max_age,
         output_dir=output_dir,
         max_workers=workers,
         max_repos=max_repos,
-        reclassify_readme=reclassify_readme,
+        stages=run_stages,
     )

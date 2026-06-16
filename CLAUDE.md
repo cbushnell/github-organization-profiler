@@ -21,8 +21,8 @@ src/github_organization_profiler/
 │   ├── users.py       # Contributor profiles
 │   ├── quality.py     # Quality signals (CI, issues, CODEOWNERS, etc.)
 │   └── connections.py # Topics, fork graph, dependencies, workflows
-├── classifiers/       # LLM-based analysis
-│   └── readme.py      # README classification via Anthropic API
+├── classifiers/       # README classification
+│   └── local.py       # Keyword/rule-based README classifier (no API required)
 └── reports/           # Report generation
     ├── builder.py     # Assemble structured report data
     ├── render.py      # Output JSON & Markdown
@@ -38,13 +38,13 @@ src/github_organization_profiler/
 **Options:**
 - `--org` (required): GitHub organization name
 - `--token`: GitHub PAT; fallback to `GITHUB_TOKEN` env var
-- `--no-llm`: Skip LLM README classification (faster, reduced API calls)
 - `--full-refresh`: Treat all repos as active (ignore dormancy state)
 - `--dormancy-days`: Days without push to mark repo dormant (default: 90)
 - `--max-age`: Cache max age in hours; 0 = always re-fetch (default: 24)
 - `--output`: Output directory for reports (default: `./<org>`)
 - `--workers`: Number of parallel worker threads for repo collection (default: 4)
-- `--max-repos`: Limit number of repos processed (useful for testing / LLM cost control)
+- `--max-repos`: Limit number of repos processed (useful for testing)
+- `--stages`: Comma-separated list of stages to run selectively (e.g. `readme,contributors`). `repo_metadata` always runs. Skipped stages are seeded from the previous report. Mutually exclusive with `--full-refresh`.
 
 ### Pipeline (`pipeline.py`)
 
@@ -56,7 +56,7 @@ Main orchestration that:
 5. Classifies repos as active (changed) or dormant (unchanged since last run); prints newly-dormant repos
 6. For **active repos**: runs commits, quality, and connections collectors in parallel via `ThreadPoolExecutor` (controlled by `--workers`); per-repo errors are isolated and logged rather than crashing the run
 7. For **dormant repos**: carries forward connections data only (lightweight)
-8. Classifies all READMEs via LLM (unless `--no-llm`)
+8. Classifies all READMEs via local keyword classifier
 9. Builds, renders, and exports reports
 10. Prints elapsed time and any failed repos in the final summary
 
@@ -180,15 +180,17 @@ For dormant repos, `collect_dormant()` returns topics and connections from the p
 
 ### Classifiers (`classifiers/`)
 
-#### `readme.py`
-Uses Anthropic API to classify README content:
+#### `local.py`
+Keyword/rule-based README classifier. No API key or network access required.
 
-**LLM Prompt:** System role instructs Claude Haiku to categorize repo into one of 13 categories (API, CLI, Library, Infrastructure, Frontend, Design System, Documentation, Data Pipeline, ML/AI, Configuration, Example, Archive, Other).
+Classifies each repo into one of 13 categories: API / Data Service, CLI Tool, Python Library / SDK, Infrastructure / IaC, Frontend / UI, Design System, Documentation / Reference, Data Pipeline / ETL, ML / AI, Configuration / Shared Tooling, Example / Demo, Archive / Deprecated, Other.
+
+**Algorithm:** Matches repo name, description, GitHub topics, and README text (up to 8000 chars) against per-category keyword lists. Topics count 2× (curator-set signal). Confidence: ≥4 pts → high, ≥2 → medium, else low. Rules checked in order; first-match wins ties.
 
 **Functions:**
-- `classify_active(active_repos, repo_data, org, max_age, no_llm)`: Classify active repos via LLM or return empty
-- `carry_forward_dormant(dormant_repos, org)`: Load cached classifications from previous report
-- Uses cache to avoid redundant LLM calls
+- `classify_one(repo_name, readme, description, topics)`: Classify a single repo; returns `{category, summary, confidence}`
+- `classify_one_cached(repo_name, readme, description, topics, org, max_age)`: Classify with filesystem cache (key: `readme_class_local`)
+- `carry_forward_dormant(dormant_repos, org)`: Load cached classifications for dormant repos
 
 ### Reports (`reports/`)
 
@@ -267,7 +269,7 @@ After a run, output directory contains:
     - single `collection` checkpoint saved after all futures complete
     - users: contributor profiles (sequential, after collection)
 9.  Dormant repos: carry forward connections only (no API calls)
-10. Classify READMEs via LLM (or skip with --no-llm)
+10. Classify READMEs via local keyword classifier
 11. Build report structure (including delta vs previous run)
 12. Render JSON, Markdown, CSV
 13. Save state for next run
@@ -288,10 +290,12 @@ After a run, output directory contains:
 - `--max-age 0` forces re-fetch all
 - Collectors check cache before API calls
 
-### LLM Classification
-- Uses Anthropic API (Claude Haiku) for README classification
-- Runs only on active repos; dormant repos reuse previous classification
-- `--no-llm` flag disables for faster runs
+### README Classification
+- Pure keyword/rule-based classifier in `classifiers/local.py` — no API key required
+- Matches repo name, description, topics, and README text against per-category keyword rules
+- Topics carry 2× weight (curator-set, high signal); README keyword hits carry 1× weight
+- Confidence: ≥4 pts → high, ≥2 → medium, else low
+- Runs only on active repos; dormant repos reuse cached classification (`readme_class_local` cache key)
 
 ### Rate Limiting
 - Client monitors GitHub API rate limit via `rl.resources.core` (PyGithub ≥2.3 API)
@@ -304,7 +308,6 @@ After a run, output directory contains:
 ```toml
 PyGithub>=2.3       # REST API wrapper
 httpx>=0.27         # GraphQL queries
-anthropic>=0.28     # LLM classification
 typer>=0.12         # CLI framework
 rich>=13            # Colored output & progress bars
 python-dotenv>=1.0  # Environment variable loading
@@ -315,9 +318,6 @@ jinja2>=3.1         # Report templating
 
 **Required:**
 - `GITHUB_TOKEN`: GitHub personal access token
-
-**Optional:**
-- `ANTHROPIC_API_KEY`: Anthropic API key (required if LLM classification enabled)
 
 ## Testing
 
@@ -371,8 +371,7 @@ def test_something_live(github_token):
 
 1. **State & Dormancy:** Changes to dormancy logic or state structure should be carefully considered; old state files must be handled gracefully.
 2. **Cache Location:** Uses `~/.cache/github-organization-profiler`; can grow large on long-running orgs. Users can delete to force full re-fetch.
-3. **LLM Cost:** Each active repo runs through LLM; consider cost on large orgs. Use `--no-llm` for cost-sensitive runs.
-4. **API Limits:** GitHub allows 5,000 REST calls/hour. Large orgs with many collectors may hit limits; adjust or use token from bot account.
+3. **API Limits:** GitHub allows 5,000 REST calls/hour. Large orgs with many collectors may hit limits; adjust or use token from bot account.
 5. **GraphQL Queries:** Topics fetched via GraphQL upfront for all repos; a single query with pagination.
 6. **Checkpoint & Resume:** `checkpoint.py` is the single source of truth for stage ordering. Current stages: `repo_metadata → topics → collection → readme → contributors`. Adding a new pipeline stage requires adding it to `_STAGES` in `checkpoint.py` and inserting the corresponding `_save_ckpt()` call in `pipeline.py`. Do not change the order of existing stages without migrating existing checkpoint files. Old checkpoints with `last_stage: "commits"` or `"quality"` will not be recognized (treated as pre-collection), which is safe.
 7. **Interrupt Safety:** `_flush_on_interrupt` in `pipeline.py` silently swallows its own exceptions (bare `except Exception: pass`) to avoid masking the original error. Keep this handler minimal.

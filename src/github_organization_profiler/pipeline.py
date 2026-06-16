@@ -12,6 +12,60 @@ from rich.progress import BarColumn, MofNCompleteColumn, Progress, SpinnerColumn
 
 console = Console()
 
+_ALL_STAGES = {"topics", "collection", "readme", "contributors"}
+
+_NULL_README = {"category": None, "summary": None, "confidence": "n/a"}
+
+
+def _seed_from_prev_report(
+    prev_report: dict,
+    stages: set[str],
+    commit_data: dict,
+    quality_data: dict,
+    connections_data: dict,
+    readme_classes: dict,
+    users: dict,
+    topic_clusters: dict,
+    repo_data: dict,
+) -> None:
+    """Backfill data dicts for stages that won't run this partial execution."""
+    for name, repo in prev_report.get("repos", {}).items():
+        if "collection" not in stages:
+            activity = repo.get("activity") or {}
+            commit_data.setdefault(
+                name,
+                {
+                    "last_commit_at": activity.get("last_commit_at"),
+                    "total_commits": activity.get("total_commits", 0),
+                    "commit_frequency_30d": activity.get("commit_frequency_30d", 0),
+                    "commit_frequency_90d": activity.get("commit_frequency_90d", 0),
+                },
+            )
+            quality_data.setdefault(name, repo.get("quality") or {})
+            conns = repo.get("connections") or {}
+            connections_data.setdefault(
+                name,
+                {
+                    "fork_of": conns.get("fork_of"),
+                    "forks": conns.get("forks", []),
+                    "internal_package_deps": conns.get("internal_package_deps", []),
+                    "reusable_workflow_refs": conns.get("reusable_workflow_refs", []),
+                },
+            )
+        if "readme" not in stages:
+            readme_classes.setdefault(name, repo.get("readme_class") or _NULL_README)
+        if "topics" not in stages:
+            repo_data.setdefault(name, {}).setdefault(
+                "topics", (repo.get("connections") or {}).get("topics") or []
+            )
+    if "contributors" not in stages:
+        for login, profile in (prev_report.get("users") or {}).items():
+            users.setdefault(login, profile)
+    if "topics" not in stages:
+        tc = (prev_report.get("connections_summary") or {}).get("topic_clusters") or {}
+        for topic, repos_list in tc.items():
+            topic_clusters.setdefault(topic, repos_list)
+
 
 def _collect_repo(repo, org, max_age, commits_mod, quality_mod, connections_mod, token):
     """Run commits, quality, and connections collectors for one repo. Called from worker threads."""
@@ -26,19 +80,17 @@ def _collect_repo(repo, org, max_age, commits_mod, quality_mod, connections_mod,
 def run(
     org: str,
     token: str,
-    no_llm: bool,
     full_refresh: bool,
     dormancy_days: int,
     max_age: int,
     output_dir: Path,
     max_workers: int = 4,
     max_repos: int | None = None,
-    reclassify_readme: bool = False,
+    stages: set[str] | None = None,
 ) -> None:
-    from github_organization_profiler import cache
     from github_organization_profiler import checkpoint as checkpoint_mod
     from github_organization_profiler import state as state_mod
-    from github_organization_profiler.classifiers import readme as readme_mod
+    from github_organization_profiler.classifiers import local as local_mod
     from github_organization_profiler.client import get_github, get_org, rate_limit_sleep
     from github_organization_profiler.collectors import commits as commits_mod
     from github_organization_profiler.collectors import connections as connections_mod
@@ -49,11 +101,23 @@ def run(
     from github_organization_profiler.reports import csv_export
     from github_organization_profiler.reports import render as render_mod
 
+    run_stages = stages if stages is not None else _ALL_STAGES
+    partial_run = run_stages != _ALL_STAGES
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
     run_at = datetime.now(UTC).isoformat()
     start_time = time.monotonic()
 
     # --- Checkpoint ---
-    ckpt = checkpoint_mod.load(output_dir, org)
+    # Partial runs bypass checkpoint: seeding from prev_report handles prior-stage data.
+    if partial_run:
+        ckpt = None
+        existing_ckpt = checkpoint_mod.load(output_dir, org)
+        if existing_ckpt:
+            checkpoint_mod.delete(output_dir, org)
+    else:
+        ckpt = checkpoint_mod.load(output_dir, org)
     if full_refresh and ckpt:
         checkpoint_mod.delete(output_dir, org)
         ckpt = None
@@ -77,7 +141,8 @@ def run(
     failed_repos: dict = {}
 
     def _save_ckpt(stage: str, **data: Any) -> None:
-        checkpoint_mod.save(output_dir, org, stage, **data)
+        if not partial_run:
+            checkpoint_mod.save(output_dir, org, stage, **data)
 
     def _flush_on_interrupt() -> None:
         """Persist all in-memory data collected so far and save partial state."""
@@ -118,6 +183,30 @@ def run(
                 prev_report = json.loads(report_path.read_text())
             except Exception:
                 pass
+
+        if partial_run:
+            stage_list = ", ".join(sorted(run_stages))
+            console.print(
+                f"[cyan]Partial run: stages=[bold]{stage_list}[/bold] "
+                f"(repo_metadata always included)"
+            )
+            if prev_report:
+                _seed_from_prev_report(
+                    prev_report,
+                    run_stages,
+                    commit_data,
+                    quality_data,
+                    connections_data,
+                    readme_classes,
+                    users,
+                    topic_clusters,
+                    repo_data,
+                )
+            else:
+                console.print(
+                    "[yellow]Warning: no previous report found — "
+                    "skipped stages will have null data in this report."
+                )
 
         # --- GitHub client ---
         with console.status("[bold green]Connecting to GitHub..."):
@@ -177,7 +266,9 @@ def run(
                     )
 
         # --- Stage: topics ---
-        if checkpoint_mod.is_complete(ckpt, "topics"):
+        if "topics" not in run_stages:
+            console.print("[dim]topics: skipped (seeded from previous report)[/dim]")
+        elif checkpoint_mod.is_complete(ckpt, "topics"):
             console.print(
                 f"[yellow]topics: restored {len(topic_clusters)} clusters from checkpoint."
             )
@@ -211,7 +302,9 @@ def run(
                 )
 
             # Stage: collection (commits + quality + connections in parallel)
-            if checkpoint_mod.is_complete(ckpt, "collection"):
+            if "collection" not in run_stages:
+                console.print("[dim]collection: skipped (seeded from previous report)[/dim]")
+            elif checkpoint_mod.is_complete(ckpt, "collection"):
                 console.print(
                     f"[yellow]collection: restored {len(commit_data)} repos from checkpoint."
                 )
@@ -283,54 +376,42 @@ def run(
                     progress.advance(task)
 
         # --- Stage: readme ---
-        if reclassify_readme:
-            n = cache.evict_null_readme_classes(org)
-            console.print(
-                f"[cyan]--reclassify-readme: evicted {n} null readme_class cache entries."
-            )
-        if checkpoint_mod.is_complete(ckpt, "readme"):
+        if "readme" not in run_stages:
+            console.print("[dim]readme: skipped (seeded from previous report)[/dim]")
+        elif checkpoint_mod.is_complete(ckpt, "readme"):
             console.print(f"[yellow]readme: restored {len(readme_classes)} repos from checkpoint.")
-        elif no_llm:
-            console.print("[cyan]Classifying READMEs (skipped — --no-llm)")
-            readme_classes = {
-                r.name: {"category": None, "summary": None, "confidence": "n/a"}
-                for r in active_repos
-            }
-            _save_ckpt("readme", readme_classes=readme_classes)
         else:
-            llm_client = readme_mod.make_client()
-            if not llm_client:
-                console.print("[yellow]Skipping README classification (ANTHROPIC_API_KEY not set)")
-                readme_classes = {
-                    r.name: {"category": None, "summary": None, "confidence": "n/a"}
-                    for r in active_repos
-                }
-                _save_ckpt("readme", readme_classes=readme_classes)
-            else:
-                with Progress(
-                    SpinnerColumn(),
-                    TextColumn("[progress.description]{task.description}"),
-                    BarColumn(),
-                    MofNCompleteColumn(),
-                    console=console,
-                ) as progress:
-                    task = progress.add_task(
-                        f"[green]Classifying READMEs ({len(active_repos)} active)...",
-                        total=len(active_repos),
-                    )
-                    for repo in active_repos:
-                        if repo.name not in readme_classes:
-                            readme = (repo_data.get(repo.name) or {}).get("readme") or ""
-                            readme_classes[repo.name] = readme_mod.classify_one_cached(
-                                llm_client, repo.name, readme, org, max_age
-                            )
-                        progress.advance(task)
-                _save_ckpt("readme", readme_classes=readme_classes)
-        readme_classes_dormant = readme_mod.carry_forward_dormant(dormant_repos, org)
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                MofNCompleteColumn(),
+                console=console,
+            ) as progress:
+                task = progress.add_task(
+                    f"[green]Classifying READMEs ({len(active_repos)} active)...",
+                    total=len(active_repos),
+                )
+                for repo in active_repos:
+                    if repo.name not in readme_classes:
+                        meta = repo_data.get(repo.name) or {}
+                        readme_classes[repo.name] = local_mod.classify_one_cached(
+                            repo.name,
+                            meta.get("readme") or "",
+                            meta.get("description"),
+                            meta.get("topics") or [],
+                            org,
+                            max_age,
+                        )
+                    progress.advance(task)
+            _save_ckpt("readme", readme_classes=readme_classes)
+        readme_classes_dormant = local_mod.carry_forward_dormant(dormant_repos, org)
         readme_classes.update(readme_classes_dormant)
 
         # --- Stage: contributors ---
-        if checkpoint_mod.is_complete(ckpt, "contributors"):
+        if "contributors" not in run_stages:
+            console.print("[dim]contributors: skipped (seeded from previous report)[/dim]")
+        elif checkpoint_mod.is_complete(ckpt, "contributors"):
             console.print(
                 f"[yellow]contributors: restored {len(users)} unique users from checkpoint."
             )
