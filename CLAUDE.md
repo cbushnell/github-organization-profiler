@@ -42,7 +42,7 @@ src/github_organization_profiler/
 - `--full-refresh`: Treat all repos as active (ignore dormancy state)
 - `--dormancy-days`: Days without push to mark repo dormant (default: 90)
 - `--max-age`: Cache max age in hours; 0 = always re-fetch (default: 24)
-- `--output`: Output directory for reports (default: `./output`)
+- `--output`: Output directory for reports (default: `./<org>`)
 - `--workers`: Number of parallel worker threads for repo collection (default: 4)
 - `--max-repos`: Limit number of repos processed (useful for testing / LLM cost control)
 
