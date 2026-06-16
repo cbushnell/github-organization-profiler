@@ -44,6 +44,7 @@ src/github_organization_profiler/
 - `--output`: Output directory for reports (default: `./<org>`)
 - `--workers`: Number of parallel worker threads for repo collection (default: 4)
 - `--max-repos`: Limit number of repos processed (useful for testing)
+- `--stages`: Comma-separated list of stages to run selectively (e.g. `readme,contributors`). `repo_metadata` always runs. Skipped stages are seeded from the previous report. Mutually exclusive with `--full-refresh`.
 
 ### Pipeline (`pipeline.py`)
 
