@@ -78,7 +78,7 @@ github-organization-profiler --org <name> --max-repos 10
 | `--stages` | *(all)* | Comma-separated stages to run: `topics,collection,readme,contributors`. Omit to run all. Mutually exclusive with `--full-refresh`. |
 | `--dormancy-days` | `90` | Days without a push to mark a repo dormant |
 | `--max-age` | `24` | Cache max age in hours (0 = always re-fetch) |
-| `--output` | `./<org>` | Directory for report files |
+| `--output` | `./output/<org>` | Directory for report files |
 | `--workers` | `4` | Parallel worker threads for repo collection |
 | `--max-repos` | *(none)* | Cap on number of repos processed |
 

@@ -33,7 +33,7 @@ def main(
         24, "--max-age", help="Cache max age in hours (0 = always re-fetch)"
     ),
     output: Path | None = typer.Option(
-        None, "--output", help="Directory for report output files (default: ./<org>)"
+        None, "--output", help="Directory for report output files (default: ./output/<org>)"
     ),
     workers: int = typer.Option(
         4, "--workers", help="Number of parallel workers for repo collection (default: 4)"
@@ -73,7 +73,7 @@ def main(
             raise typer.Exit(1)
         run_stages = requested
 
-    output_dir = output if output is not None else Path(org)
+    output_dir = output if output is not None else Path("output") / org
 
     from github_organization_profiler import pipeline
 
