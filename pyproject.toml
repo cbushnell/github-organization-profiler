@@ -25,7 +25,7 @@ packages = ["src/github_organization_profiler"]
 [project.optional-dependencies]
 test = [
     "pytest>=7.4",
-    "pytest-mock>=3.12",
+    "pytest-mock>=3.15.1",
     "respx>=0.20",
 ]
 
